@@ -6,12 +6,17 @@
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04-E95420?logo=ubuntu)](https://releases.ubuntu.com/22.04/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
+<p>
+  <img src="docs/KISS%20show.gif" alt="KISS demo 1" width="48%" style="margin-right: 25px;">
+  <img src="docs/KISS%20show_2.gif" alt="KISS demo 2" width="48%">
+</p>
+
 **Nav2_3D** 是一个面向四轮滑移转向机器人的 ROS 2 Humble 导航工作空间。系统以 Livox MID-360 3D LiDAR 和 IMU 为核心传感器，集成 LiDAR-Inertial Odometry (LIO) 里程计、3D 点云重定位和 Nav2 导航框架，支持 **Gazebo 仿真**与**实机部署**，仅需切换启动脚本即可在两种模式间无缝切换。
 
 核心特性：
 
+- **3D 重定位** — 基于 small_gicp + KISS-Matcher 的全局重定位
 - **双 LIO 后端** — FAST-LIO2 与 Point-LIO 可灵活切换
-- **3D 重定位** — 基于 small_gicp / KISS-Matcher 的全局重定位
 - **仿真-实机一致性** — 同一套导航栈，仅传感器驱动和 URDF 不同
 - **完整工具链** — 构建、建图、保存地图、导航全流程脚本化
 
@@ -92,38 +97,52 @@ source install/setup.bash
 
 包含 `small_gicp_relocalization`，基于先验 PCD 地图进行重定位。
 
-### 3.5 全局重定位：KISS-Matcher + small_gicp
+### 3.5 全局重定位：三种方案
 
-当机器人初始位姿未知、RViz 的 **"2D Pose Estimate"** 给不准，或 small_gicp 依赖局部初值难以收敛时，可使用 `global_relocalization_kiss_matcher`。该节点订阅 `/registered_scan`，累计当前 LiDAR 点云，与先验 PCD 全局地图做匹配，成功后持续发布 `map` &rarr; `odom`。
+系统提供三种基于先验 PCD 地图的 3D 重定位方案：
 
-先确认先验点云路径正确：
+- **KISS-Matcher + small_gicp**：适合机器人初始位姿未知、**"2D Pose Estimate"** 给不准，或纯 small_gicp 因初值偏差过大难以收敛的场景。`global_relocalization_kiss_matcher` 会先累计 `/registered_scan` 做全局粗配准，初始化成功后再切换到 small_gicp 连续跟踪，并持续发布 `map` &rarr; `odom`。
+- **纯 small_gicp**：适合机器人初始位姿大致已知的场景。默认在机器在 (0,0,0) 附近开始收敛，可在 small_gicp_relocalization 的 launch 中自定义开机点位或者在 rviz 中 **"2D Pose Estimate"** 给定初始位姿，再由 `small_gicp_relocalization` 配准到先验地图，收敛更快、流程更简单，持续发布 `map` &rarr; `odom`。
+- **ICP 配准**：适用场景和纯 small_gicp 类似，不过只有开机那一刻进行重定位，后续不再维护 `map` &rarr; `odom`。
+
+使用前先确认先验点云路径正确：
 
 ```bash
+vim src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
 vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
 ```
 
-重点修改：
+重点检查：
 
 - `prior_pcd_file`：先验 PCD 地图路径，例如 `src/me_nav2_bringup/pcd/*.pcd`
 - `input_cloud_topic`：默认 `/registered_scan`
 - `map_frame` / `odom_frame`：默认 `map` / `odom`
 - `base_frame` / `robot_base_frame` / `lidar_frame`：默认 `base_footprint` / `base_footprint` / `livox_frame`
 
-启动顺序建议：
+启动时二选一即可，同一时间只能有一个节点发布 `map` &rarr; `odom`。
+
+纯 small_gicp 方案通常已集成在导航脚本中：
+
+```bash
+source install/setup.bash
+./nav2_sim.sh
+# 或
+./nav2_real.sh
+```
+
+如果要使用 KISS-Matcher + small_gicp，请先确保 `nav2_sim.sh` / `nav2_real.sh` 中没有同时启动 `small_gicp_relocalization`，然后单独启动全局重定位节点：
 
 ```bash
 source install/setup.bash
 
-# 1. 先启动仿真或实机导航主流程，但不要同时启动另一个发布 map->odom 的重定位节点
+# 1. 启动仿真或实机导航主流程
 ./nav2_sim.sh
 # 或
 ./nav2_real.sh
 
-# 2. 单独启动 KISS-Matcher 全局重定位节点
+# 2. 启动 KISS-Matcher 全局重定位节点
 ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalization_launch.py
 ```
-
-> 如果 `nav2_sim.sh` / `nav2_real.sh` 中已经启动了 `small_gicp_relocalization`，请先注释掉对应行，避免两个节点同时发布 `map` &rarr; `odom` 造成 TF 冲突。
 
 判断是否成功：
 
@@ -132,7 +151,7 @@ ros2 run tf2_ros tf2_echo map odom
 ros2 topic hz /registered_scan
 ```
 
-日志中出现 `KISSMatcher initialization succeeded` 后，节点会进入 small_gicp 连续跟踪阶段；若持续出现 `KISSMatcher initialization failed`，通常是当前累计点云与先验地图重叠不足、点云太稀疏，或 `prior_pcd_file` / 坐标系设置不匹配。
+日志中出现 `KISSMatcher initialization succeeded` 表示全局初始化成功，随后会进入 small_gicp 连续跟踪阶段。若持续出现 `KISSMatcher initialization failed`，通常是当前累计点云与先验地图重叠不足、点云太稀疏，或 `prior_pcd_file` / 坐标系设置不匹配。
 
 ## 4. 功能包
 
@@ -146,7 +165,7 @@ ros2 topic hz /registered_scan
 
 **配准与重定位** (`src/registration/`)
 
-- `small_gicp_relocalization` — 主重定位方案：基于 small_gicp 的 3D 点云配准
+- `small_gicp_relocalization` — 已知大概开机位姿重定位方案：基于 small_gicp 的 3D 点云配准
 - `global_relocalization_kiss_matcher` — KISS-Matcher + small_gicp 全局重定位：无初值粗配准初始化，随后用 GICP 持续跟踪 `map` &rarr; `odom`
 - `KISS-Matcher` — ICRA 2025：快速全局点云配准 (FPFH + TEASER++ + small_gicp)
 
