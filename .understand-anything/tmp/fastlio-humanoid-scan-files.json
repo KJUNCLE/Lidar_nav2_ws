@@ -1,0 +1,391 @@
+{
+  "scriptCompleted": true,
+  "files": [
+    {
+      "path": "data/map.ply",
+      "language": "ply",
+      "sizeLines": 7672,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/.gitmodules",
+      "language": "unknown",
+      "sizeLines": 4,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/CMakeLists.txt",
+      "language": "txt",
+      "sizeLines": 136,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/config/avia.yaml",
+      "language": "yaml",
+      "sizeLines": 46,
+      "fileCategory": "config"
+    },
+    {
+      "path": "FAST_LIO/config/horizon.yaml",
+      "language": "yaml",
+      "sizeLines": 46,
+      "fileCategory": "config"
+    },
+    {
+      "path": "FAST_LIO/config/mid360.yaml",
+      "language": "yaml",
+      "sizeLines": 51,
+      "fileCategory": "config"
+    },
+    {
+      "path": "FAST_LIO/config/ouster64.yaml",
+      "language": "yaml",
+      "sizeLines": 47,
+      "fileCategory": "config"
+    },
+    {
+      "path": "FAST_LIO/config/velodyne.yaml",
+      "language": "yaml",
+      "sizeLines": 48,
+      "fileCategory": "config"
+    },
+    {
+      "path": "FAST_LIO/include/common_lib.h",
+      "language": "c",
+      "sizeLines": 269,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/Exp_mat.h",
+      "language": "c",
+      "sizeLines": 103,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/ikd-Tree/ikd_Tree.cpp",
+      "language": "cpp",
+      "sizeLines": 1728,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/ikd-Tree/ikd_Tree.h",
+      "language": "c",
+      "sizeLines": 344,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/ikd-Tree/README.md",
+      "language": "markdown",
+      "sizeLines": 2,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/esekfom/esekfom.hpp",
+      "language": "cpp",
+      "sizeLines": 2008,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/esekfom/util.hpp",
+      "language": "cpp",
+      "sizeLines": 82,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/build_manifold.hpp",
+      "language": "cpp",
+      "sizeLines": 229,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/src/mtkmath.hpp",
+      "language": "cpp",
+      "sizeLines": 294,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/src/SubManifold.hpp",
+      "language": "cpp",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/src/vectview.hpp",
+      "language": "cpp",
+      "sizeLines": 168,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/startIdx.hpp",
+      "language": "cpp",
+      "sizeLines": 328,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/types/S2.hpp",
+      "language": "cpp",
+      "sizeLines": 316,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/types/SOn.hpp",
+      "language": "cpp",
+      "sizeLines": 317,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/types/vect.hpp",
+      "language": "cpp",
+      "sizeLines": 461,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/IKFoM_toolkit/mtk/types/wrapped_cv_mat.hpp",
+      "language": "cpp",
+      "sizeLines": 113,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/matplotlibcpp.h",
+      "language": "c",
+      "sizeLines": 2499,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/so3_math.h",
+      "language": "c",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/include/use-ikfom.hpp",
+      "language": "cpp",
+      "sizeLines": 125,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/launch/gdb_debug_example.launch",
+      "language": "launch",
+      "sizeLines": 22,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/launch/mapping.launch.py",
+      "language": "python",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/Log/dbg.txt",
+      "language": "txt",
+      "sizeLines": 0,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/Log/fast_lio_time_log_analysis.m",
+      "language": "m",
+      "sizeLines": 135,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/Log/guide.md",
+      "language": "markdown",
+      "sizeLines": 1,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/Log/imu.txt",
+      "language": "txt",
+      "sizeLines": 0,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/Log/mat_out.txt",
+      "language": "txt",
+      "sizeLines": 0,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/Log/mat_pre.txt",
+      "language": "txt",
+      "sizeLines": 52,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/Log/plot.py",
+      "language": "python",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/Log/pos_log.txt",
+      "language": "txt",
+      "sizeLines": 0,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/msg/Pose6D.msg",
+      "language": "msg",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/package.xml",
+      "language": "xml",
+      "sizeLines": 38,
+      "fileCategory": "config"
+    },
+    {
+      "path": "FAST_LIO/README.md",
+      "language": "markdown",
+      "sizeLines": 199,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FAST_LIO/rviz_cfg/loam_livox.rviz",
+      "language": "rviz",
+      "sizeLines": 358,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/rviz/fastlio.rviz",
+      "language": "rviz",
+      "sizeLines": 304,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/src/IMU_Processing.hpp",
+      "language": "cpp",
+      "sizeLines": 379,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/src/laserMapping.cpp",
+      "language": "cpp",
+      "sizeLines": 1222,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/src/preprocess.cpp",
+      "language": "cpp",
+      "sizeLines": 1068,
+      "fileCategory": "code"
+    },
+    {
+      "path": "FAST_LIO/src/preprocess.h",
+      "language": "c",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/CMakeLists.txt",
+      "language": "txt",
+      "sizeLines": 176,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "open3d_loc/config/loc_param_g1.yaml",
+      "language": "yaml",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": "open3d_loc/include/open3d_conversions/DpgtConversions.h",
+      "language": "c",
+      "sizeLines": 217,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/include/open3d_conversions/open3d_conversions.h",
+      "language": "c",
+      "sizeLines": 80,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/include/open3d_conversions/RosConversions.h",
+      "language": "c",
+      "sizeLines": 802,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/include/open3d_registration/open3d_registration.h",
+      "language": "c",
+      "sizeLines": 146,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/launch/localization_3d_g1.launch.py",
+      "language": "python",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/launch/open3d_loc_g1.launch.py",
+      "language": "python",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/package.xml",
+      "language": "xml",
+      "sizeLines": 53,
+      "fileCategory": "config"
+    },
+    {
+      "path": "open3d_loc/rviz_cfg/fastlio.rviz",
+      "language": "rviz",
+      "sizeLines": 349,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/src/global_localization.cpp",
+      "language": "cpp",
+      "sizeLines": 1032,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/src/open3d_conversions/open3d_conversions.cpp",
+      "language": "cpp",
+      "sizeLines": 352,
+      "fileCategory": "code"
+    },
+    {
+      "path": "open3d_loc/src/open3d_registration/open3d_registration.cpp",
+      "language": "cpp",
+      "sizeLines": 383,
+      "fileCategory": "code"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 291,
+      "fileCategory": "docs"
+    }
+  ],
+  "totalFiles": 60,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "moderate",
+  "stats": {
+    "filesScanned": 60,
+    "byCategory": {
+      "code": 41,
+      "docs": 11,
+      "config": 8
+    },
+    "byLanguage": {
+      "ply": 1,
+      "unknown": 1,
+      "txt": 7,
+      "yaml": 6,
+      "c": 10,
+      "cpp": 19,
+      "markdown": 4,
+      "launch": 1,
+      "python": 4,
+      "m": 1,
+      "msg": 1,
+      "xml": 2,
+      "rviz": 3
+    }
+  }
+}
