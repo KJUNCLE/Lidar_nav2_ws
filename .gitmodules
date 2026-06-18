@@ -7,6 +7,3 @@
 [submodule "src/registration/KISS-Matcher"]
 	path = src/registration/KISS-Matcher
 	url = git@github.com:KJUNCLE/KISS-Matcher.git
-[submodule "src/FAST_LIO_LOCALIZATION_HUMANOID"]
-	path = src/FAST_LIO_LOCALIZATION_HUMANOID
-	url = git@github.com:KJUNCLE/FAST_LIO_LOCALIZATION_HUMANOID.git
