@@ -7,7 +7,11 @@ LioInterface::LioInterface(const rclcpp::NodeOptions & options)
 : Node("lio_interface", options){
 
     this->declare_parameter("odometry_sub", "Odometry");
+    this->declare_parameter("base_frame", "base_footprint");
+    this->declare_parameter("lidar_frame", "livox_frame");
     this->get_parameter("odometry_sub", odometry_sub_);
+    this->get_parameter("base_frame", base_frame_);
+    this->get_parameter("lidar_frame", lidar_frame_);
 
     base_frame_to_lidar_initialized_ = false;
 
@@ -21,7 +25,7 @@ LioInterface::LioInterface(const rclcpp::NodeOptions & options)
     odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/registered_odometry", 5);
 
     pcd_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "/cloud_registered", rclcpp::SensorDataQoS(), 
+        "/cloud_registered", rclcpp::SensorDataQoS(),
         std::bind(&LioInterface::pointCloudCallback, this, std::placeholders::_1));
 
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -61,11 +65,11 @@ void LioInterface::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPt
     try {
         // 从TF树中获取 livox_frame 在 base_footprint 下的位姿 (T_base_footprint_livox)
         auto tf_stamped_tf_base_frame_to_lidar_frame = tf_buffer_->lookupTransform(
-            "base_footprint", 
-            "livox_frame", 
-            tf2::TimePointZero,      
-            std::chrono::seconds(1)   
-        ); 
+            base_frame_,
+            lidar_frame_,
+            tf2::TimePointZero,
+            std::chrono::seconds(1)
+        );
 
         tf2::Transform tf_base_frame_to_lidar_frame;        // base_frame 到 lidar_frame 的TF变换
 
@@ -76,7 +80,7 @@ void LioInterface::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPt
         tf_odom_to_lidar_odom_ = tf_base_frame_to_lidar_frame;
 
         base_frame_to_lidar_initialized_ = true;
-    }   
+    }
     catch (const tf2::TransformException & ex) {
         RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s Retrying...", ex.what());
         return;
@@ -94,7 +98,7 @@ void LioInterface::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPt
     nav_msgs::msg::Odometry out;
     out.header.stamp = msg->header.stamp;
     out.header.frame_id = "odom";
-    out.child_frame_id = "livox_frame";
+    out.child_frame_id = lidar_frame_;
 
     const auto & origin = tf_odom_to_lidar.getOrigin();
     out.pose.pose.position.x = origin.x();

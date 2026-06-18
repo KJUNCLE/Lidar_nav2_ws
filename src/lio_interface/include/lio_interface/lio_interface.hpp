@@ -29,6 +29,8 @@ public:
 private:
 
     std::string odometry_sub_;
+    std::string base_frame_;
+    std::string lidar_frame_;
 
     bool base_frame_to_lidar_initialized_;
     

@@ -33,15 +33,12 @@ else()
   find_package(kiss_matcher REQUIRED)
 endif()
 
-# Load small_gicp
-set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
-include(FetchContent)
-FetchContent_Declare(
-  small_gicp
-  GIT_REPOSITORY https://github.com/koide3/small_gicp
-  GIT_TAG master
-)
-FetchContent_MakeAvailable(small_gicp)
+find_package(small_gicp REQUIRED)
+if(TARGET small_gicp::small_gicp)
+  set(SMALL_GICP_TARGET small_gicp::small_gicp)
+else()
+  set(SMALL_GICP_TARGET small_gicp)
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -110,7 +107,7 @@ ament_target_dependencies(kiss_matcher_sam
 target_link_libraries(kiss_matcher_sam
   kiss_matcher::kiss_matcher_core
   ${PCL_LIBRARIES}
-  small_gicp
+  ${SMALL_GICP_TARGET}
   gtsam
 )
 
@@ -129,7 +126,7 @@ ament_target_dependencies(inter_frame_alignment
 target_link_libraries(inter_frame_alignment
   kiss_matcher::kiss_matcher_core
   ${PCL_LIBRARIES}
-  small_gicp
+  ${SMALL_GICP_TARGET}
   gtsam
 )
 
@@ -140,7 +137,7 @@ add_library(global_small_gicp_relocalization_node SHARED
 target_include_directories(global_small_gicp_relocalization_node PUBLIC include)
 target_link_libraries(global_small_gicp_relocalization_node
   ${PCL_LIBRARIES}
-  small_gicp
+  ${SMALL_GICP_TARGET}
   OpenMP::OpenMP_CXX
   kiss_matcher::kiss_matcher_core
   gtsam
@@ -168,7 +165,7 @@ add_library(global_kiss_matcher_relocalization_node SHARED
 target_include_directories(global_kiss_matcher_relocalization_node PUBLIC include)
 target_link_libraries(global_kiss_matcher_relocalization_node
   ${PCL_LIBRARIES}
-  small_gicp
+  ${SMALL_GICP_TARGET}
   OpenMP::OpenMP_CXX
   kiss_matcher::kiss_matcher_core
   gtsam

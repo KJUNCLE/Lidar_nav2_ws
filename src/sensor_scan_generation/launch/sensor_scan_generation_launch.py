@@ -15,7 +15,12 @@ def generate_launch_description():
         namespace='',
         output='screen',
         emulate_tty=True,  # 开启提示颜色
-        parameters=[{'use_sim_time': True}],
+        parameters=[{
+            'use_sim_time': False,
+            'lidar_frame': 'livox_frame',
+            'base_footprint_frame': 'base_footprint',
+            'chassis_frame': 'chassis',
+        }],
     )
 
     return LaunchDescription([sensor_scan_generation_node])

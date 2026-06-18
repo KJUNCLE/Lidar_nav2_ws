@@ -48,10 +48,10 @@ cd scripts
 构建脚本等价于：
 
 ```bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+./build_cpu_real.sh
 ```
 
-每次修改源代码后需重新构建。启动任何节点前确保已执行 `source install/setup.bash`。
+CPU 实车部署分支默认只构建车端必需包，不全量构建 CUDA/Open3D/RTAB-Map/Gazebo/Point-LIO 相关包。每次修改源代码后需重新构建。启动任何节点前确保已执行 `source install/setup.bash`。
 
 ## 3. 快速开始
 
@@ -90,19 +90,19 @@ cd scripts
 
 ```bash
 cd scripts
-./mapping_real.sh
+./mapping_real.sh map_name:=nav_test_4_27
 ```
 
-将 Gazebo 替换为 Livox MID-360 硬件驱动 (`livox_ros_driver2`) 和实机 URDF (`gld_robot_description`)。
+将 Gazebo 替换为 Livox MID-360 硬件驱动、FAST-LIO、实车 TF、3D→2D 切片和 SLAM Toolbox。车体尺寸、MID360 外参和 frame 名称集中在 `src/me_nav2_bringup/config/vehicle.yaml`。
 
 ### 3.4 实机导航
 
 ```bash
 cd scripts
-./nav2_real.sh
+./nav2_real.sh map_name:=nav_test_4_27
 ```
 
-包含 `small_gicp_relocalization`，基于先验 PCD 地图进行重定位。
+默认使用 `small_gicp_relocalization` 基于 `src/me_nav2_bringup/pcd/<map_name>.pcd` 重定位，并加载 `src/me_nav2_bringup/map/<map_name>.yaml` 导航。未知起点可使用 `./nav2_real.sh map_name:=nav_test_4_27 relocalizer:=kiss`。
 
 ### 3.5 全局重定位：三种方案
 
@@ -112,12 +112,7 @@ cd scripts
 - **纯 small_gicp**：适合机器人初始位姿大致已知的场景。默认在机器在 (0,0,0) 附近开始收敛，可在 small_gicp_relocalization 的 launch 中自定义开机点位或者在 rviz 中 **"2D Pose Estimate"** 给定初始位姿，再由 `small_gicp_relocalization` 配准到先验地图，收敛更快、流程更简单，持续发布 `map` &rarr; `odom`。
 - **ICP 配准**：适用场景和纯 small_gicp 类似，不过只有开机那一刻进行重定位，后续不再维护 `map` &rarr; `odom`。
 
-使用前先确认先验点云路径正确：
-
-```bash
-vim src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
-vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
-```
+使用前先确认先验点云路径正确。实车 launch 默认按 `map_name` 推导路径，也可以显式传入 `prior_pcd_file:=/absolute/path/to/map.pcd`。
 
 重点检查：
 
@@ -128,29 +123,20 @@ vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_match
 
 启动时二选一即可，同一时间只能有一个节点发布 `map` &rarr; `odom`。
 
-纯 small_gicp 方案通常已集成在导航脚本中：
+纯 small_gicp 方案已集成在实车导航脚本中：
 
 ```bash
 source install/setup.bash
 cd scripts
-./nav2_sim.sh
-# 或
-./nav2_real.sh
+./nav2_real.sh map_name:=nav_test_4_27 relocalizer:=small_gicp
 ```
 
-如果要使用 KISS-Matcher + small_gicp，请先确保 `scripts/nav2_sim.sh` / `scripts/nav2_real.sh` 中没有同时启动 `small_gicp_relocalization`，然后单独启动全局重定位节点：
+如果要使用 KISS-Matcher + small_gicp，不要另开第二个重定位节点，直接切换 `relocalizer` 参数：
 
 ```bash
 source install/setup.bash
 cd scripts
-
-# 1. 启动仿真或实机导航主流程
-./nav2_sim.sh
-# 或
-./nav2_real.sh
-
-# 2. 启动 KISS-Matcher 全局重定位节点
-ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalization_launch.py
+./nav2_real.sh map_name:=nav_test_4_27 relocalizer:=kiss
 ```
 
 判断是否成功：
@@ -277,7 +263,7 @@ ros2 topic hz /registered_scan
 当前 launch 文件给出的工作空间默认值为：
 
 ```text
-prior_pcd_file: /home/pio/Nav2_3D_ws/src/me_nav2_bringup/pcd/nav_test_4_27.pcd
+prior_pcd_file: src/me_nav2_bringup/pcd/nav_test_4_27.pcd
 input_cloud_topic: /registered_scan
 map_frame: map
 odom_frame: odom

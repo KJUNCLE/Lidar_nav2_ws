@@ -46,10 +46,10 @@ cd scripts
 The build script is equivalent to:
 
 ```bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+./build_cpu_real.sh
 ```
 
-Rebuild after every source-code change. Before launching any node, make sure `source install/setup.bash` has been executed.
+The CPU real-robot deployment branch builds only the onboard runtime packages by default. It does not build CUDA/Open3D/RTAB-Map/Gazebo/Point-LIO packages. Rebuild after every source-code change. Before launching any node, make sure `source install/setup.bash` has been executed.
 
 ## 3. Quick Start
 
@@ -88,19 +88,19 @@ Use **"Nav2 Goal"** in RViz to send a navigation goal.
 
 ```bash
 cd scripts
-./mapping_real.sh
+./mapping_real.sh map_name:=nav_test_4_27
 ```
 
-This replaces Gazebo with the Livox MID-360 hardware driver (`livox_ros_driver2`) and the real-robot URDF (`gld_robot_description`).
+This starts the Livox MID-360 driver, FAST-LIO, real-robot TF, 3D-to-2D slicing, and SLAM Toolbox. Vehicle footprint, MID360 extrinsic, and frame names are centralized in `src/me_nav2_bringup/config/vehicle.yaml`.
 
 ### 3.4 Real-Robot Navigation
 
 ```bash
 cd scripts
-./nav2_real.sh
+./nav2_real.sh map_name:=nav_test_4_27
 ```
 
-This includes `small_gicp_relocalization` and performs relocalization against a prior PCD map.
+By default this uses `small_gicp_relocalization` with `src/me_nav2_bringup/pcd/<map_name>.pcd` and loads `src/me_nav2_bringup/map/<map_name>.yaml`. For unknown startup pose, use `./nav2_real.sh map_name:=nav_test_4_27 relocalizer:=kiss`.
 
 ### 3.5 Global Relocalization: Three Options
 
@@ -110,12 +110,7 @@ The system provides three 3D relocalization options based on a prior PCD map:
 - **Pure small_gicp**: Suitable when the robot's approximate initial pose is known. By default, it starts converging near (0,0,0). You can customize the startup pose in the `small_gicp_relocalization` launch file or provide an initial pose in RViz with **"2D Pose Estimate"**. `small_gicp_relocalization` then registers against the prior map, converges faster, keeps the workflow simpler, and continuously publishes `map` &rarr; `odom`.
 - **ICP registration**: Similar use case to pure small_gicp, but relocalization is performed only once at startup. It does not continue maintaining `map` &rarr; `odom`.
 
-Before use, confirm that the prior point-cloud path is correct:
-
-```bash
-vim src/registration/small_gicp_relocalization/launch/small_gicp_relocalization_launch.py
-vim src/registration/global_relocalization_kiss_matcher/launch/global_kiss_matcher_relocalization_launch.py
-```
+Before use, confirm that the prior point-cloud path is correct. The real launch derives it from `map_name` by default, and it can also be overridden with `prior_pcd_file:=/absolute/path/to/map.pcd`.
 
 Check the following carefully:
 
@@ -126,29 +121,20 @@ Check the following carefully:
 
 Choose only one relocalization node at launch time. Only one node may publish `map` &rarr; `odom` at the same time.
 
-The pure small_gicp option is usually already integrated into the navigation scripts:
+The pure small_gicp option is integrated into the real-robot navigation script:
 
 ```bash
 source install/setup.bash
 cd scripts
-./nav2_sim.sh
-# or
-./nav2_real.sh
+./nav2_real.sh map_name:=nav_test_4_27 relocalizer:=small_gicp
 ```
 
-To use KISS-Matcher + small_gicp, first make sure `scripts/nav2_sim.sh` / `scripts/nav2_real.sh` does not also start `small_gicp_relocalization`, then start the global relocalization node separately:
+To use KISS-Matcher + small_gicp, do not start a second relocalization node. Switch the `relocalizer` launch argument:
 
 ```bash
 source install/setup.bash
 cd scripts
-
-# 1. Start the main simulation or real-robot navigation workflow
-./nav2_sim.sh
-# or
-./nav2_real.sh
-
-# 2. Start the KISS-Matcher global relocalization node
-ros2 launch global_relocalization_kiss_matcher global_kiss_matcher_relocalization_launch.py
+./nav2_real.sh map_name:=nav_test_4_27 relocalizer:=kiss
 ```
 
 Check whether it succeeded:
@@ -275,7 +261,7 @@ Common parameters:
 Current workspace defaults in the launch file:
 
 ```text
-prior_pcd_file: /home/pio/Nav2_3D_ws/src/me_nav2_bringup/pcd/nav_test_4_27.pcd
+prior_pcd_file: src/me_nav2_bringup/pcd/nav_test_4_27.pcd
 input_cloud_topic: /registered_scan
 map_frame: map
 odom_frame: odom

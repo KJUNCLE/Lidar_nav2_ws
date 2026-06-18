@@ -1,0 +1,1 @@
+CPU real deployment branch excludes RTAB-Map ROS packages from the default workspace build.

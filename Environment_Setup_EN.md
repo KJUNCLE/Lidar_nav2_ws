@@ -205,8 +205,10 @@ cd scripts
 `build.sh` is equivalent to:
 
 ```bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+./build_cpu_real.sh
 ```
+
+This CPU real-robot deployment branch builds only the onboard runtime packages by default. It does not build CUDA/Open3D/RTAB-Map/Gazebo/Point-LIO packages.
 
 After the build completes, source the workspace:
 
@@ -327,25 +329,23 @@ Real-robot mapping:
 
 ```bash
 cd ~/Lidar_nav2_ws/scripts
-./mapping_real.sh
+./mapping_real.sh map_name:=nav_test_4_27
 ```
 
 Real-robot navigation:
 
 ```bash
 cd ~/Lidar_nav2_ws/scripts
-./nav2_real.sh
+./nav2_real.sh map_name:=nav_test_4_27
 ```
 
 ## 8. Switching the LIO Backend
 
-The current scripts use FAST-LIO by default. To switch to Point-LIO, edit the launch blocks in these scripts:
+The CPU real-robot deployment branch uses FAST-LIO by default, and Point-LIO is not part of the default build. To switch to Point-LIO, first remove `src/localization/point_lio/COLCON_IGNORE`, then restore the corresponding build and launch parameters.
 
 ```bash
 vim scripts/mapping_sim.sh
 vim scripts/nav2_sim.sh
-vim scripts/mapping_real.sh
-vim scripts/nav2_real.sh
 ```
 
 Backend differences:

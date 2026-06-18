@@ -24,6 +24,7 @@
   <depend>pcl_conversions</depend>
   <depend>gtsam</depend>
   <depend>libomp-dev</depend>
+  <depend>small_gicp</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
