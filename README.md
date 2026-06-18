@@ -4,6 +4,8 @@
 
 基于 ROS 2 的 3D LiDAR 自主导航系统
 
+CPU-only MID360 实车部署请阅读：[CPU 实车部署说明](./docs/cpu_real_deployment.md)。
+
 [![ROS2](https://img.shields.io/badge/ROS2-Humble-22313F?logo=ros)](https://docs.ros.org/en/humble/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04-E95420?logo=ubuntu)](https://releases.ubuntu.com/22.04/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
@@ -52,6 +54,8 @@ cd scripts
 ```
 
 CPU 实车部署分支默认只构建车端必需包，不全量构建 CUDA/Open3D/RTAB-Map/Gazebo/Point-LIO 相关包。每次修改源代码后需重新构建。启动任何节点前确保已执行 `source install/setup.bash`。
+
+一键建图、导航和逐步调试命令详见：[CPU 实车部署说明](./docs/cpu_real_deployment.md)。
 
 ## 3. 快速开始
 
