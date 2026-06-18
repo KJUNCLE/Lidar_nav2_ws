@@ -5,7 +5,7 @@
 
 A simple example: Implementing point cloud alignment and localization using [small_gicp](https://github.com/koide3/small_gicp.git)
 
-Given a registered pointcloud (based on the odom frame) and prior pointcloud (mapped using [pointlio](https://github.com/SMBU-PolarBear-Robotics-Team/Point-LIO) or similar tools), the node will calculate the transformation between the two point clouds and publish the correction from the `map` frame to the `odom` frame.
+Given a registered pointcloud (based on the odom frame) and a prior pointcloud mapped by FAST-LIO or a compatible LiDAR odometry pipeline, the node will calculate the transformation between the two point clouds and publish the correction from the `map` frame to the `odom` frame.
 
 ## Dependencies
 
@@ -43,7 +43,7 @@ cd ..
 
 2. Adjust the transformation between `base_frame` and `lidar_frame`
 
-    The `global_pcd_map` output by algorithms such as `pointlio` and `fastlio` is strictly based on the `lidar_odom` frame. However, the initial position of the robot is typically defined by the `base_link` frame within the `odom` coordinate system. To address this discrepancy, the code listens for the coordinate transformation from `base_frame`(velocity_reference_frame) to `lidar_frame`, allowing the `global_pcd_map` to be converted into the `odom` coordinate system.
+    The `global_pcd_map` output by FAST-LIO is based on the LiDAR odometry frame. However, the initial position of the robot is typically defined by the `base_link` frame within the `odom` coordinate system. To address this discrepancy, the code listens for the coordinate transformation from `base_frame`(velocity_reference_frame) to `lidar_frame`, allowing the `global_pcd_map` to be converted into the `odom` coordinate system.
 
     If not set, empty transformation will be used.
 

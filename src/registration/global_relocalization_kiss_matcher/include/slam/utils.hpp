@@ -9,17 +9,6 @@
 
 #include <Eigen/Eigen>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <gtsam/geometry/Point3.h>
-#include <gtsam/geometry/Pose3.h>
-#include <gtsam/geometry/Rot3.h>
-#include <gtsam/nonlinear/ISAM2.h>
-#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/Values.h>
-#include <gtsam/slam/BetweenFactor.h>
-#include <gtsam/slam/PriorFactor.h>
-#include <nav_msgs/msg/odometry.hpp>
-#include <nav_msgs/msg/path.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
@@ -73,35 +62,6 @@ inline pcl::PointCloud<PointType>::Ptr voxelize(const pcl::PointCloud<PointType>
   return cloud_out;
 }
 
-inline gtsam::Pose3 eigenToGtsam(const Eigen::Matrix4d &pose) {
-  tf2::Matrix3x3 mat_tf;
-  matrixEigenToTF2(pose.block<3, 3>(0, 0), mat_tf);
-
-  double roll, pitch, yaw;
-  mat_tf.getRPY(roll, pitch, yaw);
-
-  return gtsam::Pose3(gtsam::Rot3::RzRyRx(roll, pitch, yaw),
-                      gtsam::Point3(pose(0, 3), pose(1, 3), pose(2, 3)));
-}
-
-inline Eigen::Matrix4d gtsamToEigen(const gtsam::Pose3 &pose) {
-  Eigen::Matrix4d output = Eigen::Matrix4d::Identity();
-
-  tf2::Quaternion quat;
-  quat.setRPY(pose.rotation().roll(), pose.rotation().pitch(), pose.rotation().yaw());
-
-  tf2::Matrix3x3 tf_rot(quat);
-  Eigen::Matrix3d rot;
-  matrixTF2ToEigen(tf_rot, rot);
-
-  output.block<3, 3>(0, 0) = rot;
-  output(0, 3)             = pose.translation().x();
-  output(1, 3)             = pose.translation().y();
-  output(2, 3)             = pose.translation().z();
-
-  return output;
-}
-
 inline geometry_msgs::msg::PoseStamped eigenToPoseStamped(const Eigen::Matrix4d &pose,
                                                           const std::string &frame_id = "map") {
   tf2::Matrix3x3 mat_tf;
@@ -144,28 +104,6 @@ inline geometry_msgs::msg::Pose egienToGeoPose(const Eigen::Matrix4d &pose) {
   msg.orientation.x = quat.x();
   msg.orientation.y = quat.y();
   msg.orientation.z = quat.z();
-
-  return msg;
-}
-
-inline geometry_msgs::msg::PoseStamped gtsamToPoseStamped(const gtsam::Pose3 &pose,
-                                                          const std::string &frame_id = "map") {
-  double roll  = pose.rotation().roll();
-  double pitch = pose.rotation().pitch();
-  double yaw   = pose.rotation().yaw();
-
-  tf2::Quaternion quat;
-  quat.setRPY(roll, pitch, yaw);
-
-  geometry_msgs::msg::PoseStamped msg;
-  msg.header.frame_id    = frame_id;
-  msg.pose.position.x    = pose.translation().x();
-  msg.pose.position.y    = pose.translation().y();
-  msg.pose.position.z    = pose.translation().z();
-  msg.pose.orientation.w = quat.w();
-  msg.pose.orientation.x = quat.x();
-  msg.pose.orientation.y = quat.y();
-  msg.pose.orientation.z = quat.z();
 
   return msg;
 }

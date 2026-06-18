@@ -5,6 +5,8 @@
 
 #include <string>
 
+#include <nav_msgs/msg/odometry.hpp>
+
 #include "slam/utils.hpp"
 
 namespace kiss_matcher {

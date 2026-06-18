@@ -1,12 +1,6 @@
 [submodule "lib/robin-map"]
 	path = lib/robin-map
 	url = https://github.com/Tessil/robin-map.git
-[submodule "src/localization/rtabmap"]
-	path = src/localization/rtabmap
-	url = https://github.com/introlab/rtabmap.git
-[submodule "src/registration/KISS-Matcher"]
-	path = src/registration/KISS-Matcher
+[submodule "third_party/KISS-Matcher"]
+	path = third_party/KISS-Matcher
 	url = git@github.com:KJUNCLE/KISS-Matcher.git
-[submodule "src/FAST_LIO_LOCALIZATION_HUMANOID"]
-	path = src/FAST_LIO_LOCALIZATION_HUMANOID
-	url = git@github.com:KJUNCLE/FAST_LIO_LOCALIZATION_HUMANOID.git
