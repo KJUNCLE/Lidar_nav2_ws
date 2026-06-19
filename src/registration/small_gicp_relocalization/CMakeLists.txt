@@ -18,6 +18,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(PCL REQUIRED COMPONENTS common io)
 find_package(small_gicp REQUIRED)
 ament_auto_find_build_dependencies()
 
@@ -36,8 +37,16 @@ else()
 endif()
 
 target_link_libraries(${PROJECT_NAME}
+  ${PCL_LIBRARIES}
   OpenMP::OpenMP_CXX
   ${SMALL_GICP_TARGET}
+)
+
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
+  ${PCL_INCLUDE_DIRS}
+)
+target_compile_options(${PROJECT_NAME} PUBLIC
+  ${PCL_DEFINITIONS}
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
