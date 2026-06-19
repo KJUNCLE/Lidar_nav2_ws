@@ -122,7 +122,9 @@ private:
 
   std::map<uint32_t, std::unique_ptr<LidarPubHandler>> lidar_process_handlers_;
   std::map<uint32_t, std::vector<PointXyzlt>> points_;
+  std::mutex extrinsic_mutex_;
   std::map<uint32_t, LidarExtParameter> lidar_extrinsics_;
+  std::map<uint32_t, ExtParameterDetailed> lidar_extrinsics_detailed_;
   static std::atomic<bool> is_timestamp_sync_;
   uint16_t lidar_listen_id_ = 0;
 };

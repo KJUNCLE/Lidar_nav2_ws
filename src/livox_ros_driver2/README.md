@@ -16,6 +16,12 @@ Livox ROS Driver 2 is the 2nd-generation driver package used to connect LiDAR pr
  /livox/lidar/pointcloud | sensor_msgs/msg/PointCloud2     | ROS2 点云消息格式
  /livox/imu               | sensor_msgs/msg/Imu             | mid360 机内 imu
 
+外参说明：
+
+- `config/*_config.json` 中 `extrinsic_parameter.roll/pitch/yaw` 单位为度，用于将雷达安装坐标系旋转到发布坐标系。
+- 本内部版本会用同一套旋转外参校正点云和 `/livox/imu` 中的 `angular_velocity`、`linear_acceleration`。
+- `/livox/imu` 不发布绝对姿态四元数；驱动只能校正 IMU 的角速度和加速度向量。
+
 本功能包已内置预编译的 Livox SDK2，无需再次克隆编译安装。
 
 ## 1. Preparation

@@ -25,6 +25,7 @@
 #include "pub_handler.h"
 
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <limits>
@@ -40,7 +41,53 @@ PubHandler & pub_handler()
   return handler;
 }
 
-static ExtParameterDetailed extrinsic_global = {{0, 0, 0}, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+namespace
+{
+
+ExtParameterDetailed IdentityExtParameter()
+{
+  return {{0, 0, 0}, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+}
+
+ExtParameterDetailed BuildExtParameterDetailed(const ExtParameter & param)
+{
+  ExtParameterDetailed detailed = IdentityExtParameter();
+  detailed.trans[0] = param.x;
+  detailed.trans[1] = param.y;
+  detailed.trans[2] = param.z;
+
+  const double cos_roll = std::cos(static_cast<double>(param.roll * PI / 180.0));
+  const double cos_pitch = std::cos(static_cast<double>(param.pitch * PI / 180.0));
+  const double cos_yaw = std::cos(static_cast<double>(param.yaw * PI / 180.0));
+  const double sin_roll = std::sin(static_cast<double>(param.roll * PI / 180.0));
+  const double sin_pitch = std::sin(static_cast<double>(param.pitch * PI / 180.0));
+  const double sin_yaw = std::sin(static_cast<double>(param.yaw * PI / 180.0));
+
+  detailed.rotation[0][0] = cos_pitch * cos_yaw;
+  detailed.rotation[0][1] = sin_roll * sin_pitch * cos_yaw - cos_roll * sin_yaw;
+  detailed.rotation[0][2] = cos_roll * sin_pitch * cos_yaw + sin_roll * sin_yaw;
+
+  detailed.rotation[1][0] = cos_pitch * sin_yaw;
+  detailed.rotation[1][1] = sin_roll * sin_pitch * sin_yaw + cos_roll * cos_yaw;
+  detailed.rotation[1][2] = cos_roll * sin_pitch * sin_yaw - sin_roll * cos_yaw;
+
+  detailed.rotation[2][0] = -sin_pitch;
+  detailed.rotation[2][1] = sin_roll * cos_pitch;
+  detailed.rotation[2][2] = cos_roll * cos_pitch;
+
+  return detailed;
+}
+
+void RotateVector(
+  const RotationMatrix & rotation, float in_x, float in_y, float in_z, float & out_x,
+  float & out_y, float & out_z)
+{
+  out_x = in_x * rotation[0][0] + in_y * rotation[0][1] + in_z * rotation[0][2];
+  out_y = in_x * rotation[1][0] + in_y * rotation[1][1] + in_z * rotation[1][2];
+  out_z = in_x * rotation[2][0] + in_y * rotation[2][1] + in_z * rotation[2][2];
+}
+
+}  // namespace
 
 void PubHandler::Init() {}
 
@@ -82,16 +129,20 @@ void PubHandler::SetImuDataCallback(ImuDataCallback cb, void * client_data)
 
 void PubHandler::AddLidarsExtParam(LidarExtParameter & lidar_param)
 {
-  std::unique_lock<std::mutex> lock(packet_mutex_);
   uint32_t id = 0;
   GetLidarId(lidar_param.lidar_type, lidar_param.handle, id);
+  const ExtParameterDetailed detailed = BuildExtParameterDetailed(lidar_param.param);
+
+  std::lock_guard<std::mutex> lock(extrinsic_mutex_);
   lidar_extrinsics_[id] = lidar_param;
+  lidar_extrinsics_detailed_[id] = detailed;
 }
 
 void PubHandler::ClearAllLidarsExtrinsicParams()
 {
-  std::unique_lock<std::mutex> lock(packet_mutex_);
+  std::lock_guard<std::mutex> lock(extrinsic_mutex_);
   lidar_extrinsics_.clear();
+  lidar_extrinsics_detailed_.clear();
 }
 
 void PubHandler::SetPointCloudsCallback(PointCloudsCallback cb, void * client_data)
@@ -118,31 +169,27 @@ void PubHandler::OnLivoxLidarPointCloudCallback(
   if (data->data_type == kLivoxLidarImuData) {
     if (self->imu_callback_) {
       RawImuPoint * imu = (RawImuPoint *)data->data;
+      uint32_t id = 0;
+      ExtParameterDetailed extrinsic = IdentityExtParameter();
+      if (GetLidarId(LidarProtoType::kLivoxLidarType, handle, id)) {
+        std::lock_guard<std::mutex> lock(self->extrinsic_mutex_);
+        auto iter = self->lidar_extrinsics_detailed_.find(id);
+        if (iter != self->lidar_extrinsics_detailed_.end()) {
+          extrinsic = iter->second;
+        }
+      }
+
       ImuData imu_data;
       imu_data.lidar_type = static_cast<uint8_t>(LidarProtoType::kLivoxLidarType);
       imu_data.handle = handle;
       imu_data.time_stamp =
         GetEthPacketTimestamp(data->time_type, data->timestamp, sizeof(data->timestamp));
-      imu_data.gyro_x = imu->gyro_x * extrinsic_global.rotation[0][0] +
-                        imu->gyro_y * extrinsic_global.rotation[0][1] +
-                        imu->gyro_z * extrinsic_global.rotation[0][2];
-      //  * this->extrinsic_.rotation[0][0] + imu->gyro_x *
-      //  extrinsic_.rotation[0][1] + imu->gyro_x * extrinsic_.rotation[0][2];
-      imu_data.gyro_y = imu->gyro_x * extrinsic_global.rotation[1][0] +
-                        imu->gyro_y * extrinsic_global.rotation[1][1] +
-                        imu->gyro_z * extrinsic_global.rotation[1][2];
-      imu_data.gyro_z = imu->gyro_x * extrinsic_global.rotation[2][0] +
-                        imu->gyro_y * extrinsic_global.rotation[2][1] +
-                        imu->gyro_z * extrinsic_global.rotation[2][2];
-      imu_data.acc_x = imu->acc_x * extrinsic_global.rotation[0][0] +
-                       imu->acc_y * extrinsic_global.rotation[0][1] +
-                       imu->acc_z * extrinsic_global.rotation[0][2];
-      imu_data.acc_y = imu->acc_x * extrinsic_global.rotation[1][0] +
-                       imu->acc_y * extrinsic_global.rotation[1][1] +
-                       imu->acc_z * extrinsic_global.rotation[1][2];
-      imu_data.acc_z = imu->acc_x * extrinsic_global.rotation[2][0] +
-                       imu->acc_y * extrinsic_global.rotation[2][1] +
-                       imu->acc_z * extrinsic_global.rotation[2][2];
+      RotateVector(
+        extrinsic.rotation, imu->gyro_x, imu->gyro_y, imu->gyro_z, imu_data.gyro_x,
+        imu_data.gyro_y, imu_data.gyro_z);
+      RotateVector(
+        extrinsic.rotation, imu->acc_x, imu->acc_y, imu->acc_z, imu_data.acc_x, imu_data.acc_y,
+        imu_data.acc_z);
       self->imu_callback_(&imu_data, self->imu_client_data_);
     }
     return;
@@ -269,8 +316,18 @@ void PubHandler::RawDataProcess()
       lidar_process_handlers_[id].reset(new LidarPubHandler());
     }
     auto & process_handler = lidar_process_handlers_[id];
-    if (lidar_extrinsics_.find(id) != lidar_extrinsics_.end()) {
-      lidar_process_handlers_[id]->SetLidarsExtParam(lidar_extrinsics_[id]);
+    LidarExtParameter lidar_extrinsic;
+    bool has_lidar_extrinsic = false;
+    {
+      std::lock_guard<std::mutex> lock(extrinsic_mutex_);
+      auto iter = lidar_extrinsics_.find(id);
+      if (iter != lidar_extrinsics_.end()) {
+        lidar_extrinsic = iter->second;
+        has_lidar_extrinsic = true;
+      }
+    }
+    if (has_lidar_extrinsic) {
+      lidar_process_handlers_[id]->SetLidarsExtParam(lidar_extrinsic);
     }
     process_handler->PointCloudProcess(raw_data);
     CheckTimer(id);
@@ -369,44 +426,11 @@ void LidarPubHandler::SetLidarsExtParam(LidarExtParameter lidar_param)
   if (is_set_extrinsic_params_) {
     return;
   }
-  extrinsic_.trans[0] = lidar_param.param.x;
-  extrinsic_.trans[1] = lidar_param.param.y;
-  extrinsic_.trans[2] = lidar_param.param.z;
-
-  double cos_roll = cos(static_cast<double>(lidar_param.param.roll * PI / 180.0));
-  double cos_pitch = cos(static_cast<double>(lidar_param.param.pitch * PI / 180.0));
-  double cos_yaw = cos(static_cast<double>(lidar_param.param.yaw * PI / 180.0));
-  double sin_roll = sin(static_cast<double>(lidar_param.param.roll * PI / 180.0));
-  double sin_pitch = sin(static_cast<double>(lidar_param.param.pitch * PI / 180.0));
-  double sin_yaw = sin(static_cast<double>(lidar_param.param.yaw * PI / 180.0));
+  extrinsic_ = BuildExtParameterDetailed(lidar_param.param);
 
   std::cout << "extrinsic rpy"
             << " " << lidar_param.param.roll << " " << lidar_param.param.pitch << " "
             << lidar_param.param.yaw << "\n";
-
-  extrinsic_.rotation[0][0] = cos_pitch * cos_yaw;
-  extrinsic_.rotation[0][1] = sin_roll * sin_pitch * cos_yaw - cos_roll * sin_yaw;
-  extrinsic_.rotation[0][2] = cos_roll * sin_pitch * cos_yaw + sin_roll * sin_yaw;
-
-  extrinsic_.rotation[1][0] = cos_pitch * sin_yaw;
-  extrinsic_.rotation[1][1] = sin_roll * sin_pitch * sin_yaw + cos_roll * cos_yaw;
-  extrinsic_.rotation[1][2] = cos_roll * sin_pitch * sin_yaw - sin_roll * cos_yaw;
-
-  extrinsic_.rotation[2][0] = -sin_pitch;
-  extrinsic_.rotation[2][1] = sin_roll * cos_pitch;
-  extrinsic_.rotation[2][2] = cos_roll * cos_pitch;
-
-  extrinsic_global.rotation[0][0] = cos_pitch * cos_yaw;
-  extrinsic_global.rotation[0][1] = sin_roll * sin_pitch * cos_yaw - cos_roll * sin_yaw;
-  extrinsic_global.rotation[0][2] = cos_roll * sin_pitch * cos_yaw + sin_roll * sin_yaw;
-
-  extrinsic_global.rotation[1][0] = cos_pitch * sin_yaw;
-  extrinsic_global.rotation[1][1] = sin_roll * sin_pitch * sin_yaw + cos_roll * cos_yaw;
-  extrinsic_global.rotation[1][2] = cos_roll * sin_pitch * sin_yaw - sin_roll * cos_yaw;
-
-  extrinsic_global.rotation[2][0] = -sin_pitch;
-  extrinsic_global.rotation[2][1] = sin_roll * cos_pitch;
-  extrinsic_global.rotation[2][2] = cos_roll * cos_pitch;
   is_set_extrinsic_params_ = true;
 }
 
