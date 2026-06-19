@@ -70,7 +70,11 @@ DriverNode::DriverNode(const rclcpp::NodeOptions & node_options)
   this->get_parameter("output_data_type", output_type);
   this->get_parameter("frame_id", frame_id);
 
-  publish_freq = std::clamp(publish_freq, 0.5, 100.0);
+  if (publish_freq < 0.5) {
+    publish_freq = 0.5;
+  } else if (publish_freq > 100.0) {
+    publish_freq = 100.0;
+  }
 
   future_ = exit_signal_.get_future();
 

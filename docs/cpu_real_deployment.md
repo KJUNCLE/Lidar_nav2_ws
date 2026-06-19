@@ -166,6 +166,13 @@ global_relocalization_kiss_matcher
 ./build_cpu_real.sh --event-handlers console_direct+
 ```
 
+构建阶段常见错误：
+
+| 现象 | 根因 | 处理 |
+| --- | --- | --- |
+| `/usr/bin/env: 'bash\r': No such file or directory` | 脚本被 Windows/CRLF 行尾污染，Linux 把解释器读成 `bash\r` | 执行 `sed -i 's/\r$//' scripts/*.sh && chmod +x scripts/*.sh`；仓库已用 `.gitattributes` 固定脚本 LF 行尾 |
+| `error: 'clamp' is not a member of 'std'` | `livox_ros_driver2` 默认 C++14，但源码使用了 C++17 的 `std::clamp` | CPU 分支已改为 C++14 兼容边界判断；更新分支后重新执行 `./build_cpu_real.sh` |
+
 编译完成后加载工作空间：
 
 ```bash

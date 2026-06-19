@@ -108,6 +108,8 @@ tsl-robin-map
 
 ## 常用检查
 
+构建阶段如果出现 `bash\r` 或 `std::clamp` 错误，先看 [环境搭建 - 常见问题](./环境搭建.md#8-常见问题) 和 [CPU 实车部署说明](./docs/cpu_real_deployment.md#21-编译-cpu-实车包)。
+
 ```bash
 colcon list --names-only
 ros2 launch me_nav2_bringup cpu_real_mapping.launch.py --show-args
