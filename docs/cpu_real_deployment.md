@@ -35,7 +35,42 @@ deploy/cpu-mid360-nav2
 source /opt/ros/humble/setup.bash
 ```
 
-### 1.2 MID360 网络
+### 1.2 Docker 和 RViz 显示
+
+如果在容器中运行实车程序，推荐用仓库脚本创建容器：
+
+```bash
+./scripts/docker_run.sh
+```
+
+脚本默认挂载当前工作空间、使用 host 网络、透传 `/dev/dri`，并在宿主机有 `DISPLAY` 时挂载 X11。常用环境变量：
+
+| 变量 | 默认值 | 用处 |
+| --- | --- | --- |
+| `IMAGE` | `nav2/lidar:v1` | Docker 镜像名 |
+| `CONTAINER_NAME` | `nav2` | 容器名 |
+| `HOST_WORKSPACE` | 当前仓库根目录 | 宿主机工作空间路径 |
+| `CONTAINER_WORKSPACE` | `/workspace/<仓库名>` | 容器内工作空间路径 |
+| `ENABLE_X11` | `1` | 是否透传 RViz 图形界面 |
+| `ENABLE_GPU` | `0` | 是否启用 NVIDIA GPU；CPU 分支默认关闭 |
+| `DISPLAY` | 继承宿主机环境 | X11 display，例如 `:0` |
+
+如果宿主机 `echo $DISPLAY` 为空，但图形桌面实际使用 `:0`，先设置：
+
+```bash
+export DISPLAY=:0
+./scripts/docker_run.sh
+```
+
+如果 RViz 报 `No protocol specified` 或 `could not connect to display :0`，在宿主机执行：
+
+```bash
+xhost +SI:localuser:root
+```
+
+然后重新创建容器。`QStandardPaths: XDG_RUNTIME_DIR not set` 是 root 容器里常见的 Qt 提示，一般不影响 RViz 使用。
+
+### 1.3 MID360 网络
 
 实车启动前检查：
 
@@ -55,7 +90,7 @@ vim src/livox_ros_driver2/config/MID360_config.json
 - `lidar_configs` 中的 MID360 IP 是否与实际设备一致。
 - 主机和 MID360 是否在同一网段。
 
-### 1.3 地图命名规则
+### 1.4 地图命名规则
 
 本分支按 `map_name` 统一管理 2D 地图和 3D PCD：
 
@@ -75,7 +110,7 @@ src/me_nav2_bringup/pcd/site_a.pcd
 
 导航时必须保证 2D map 和 3D PCD 来自同一次或同一坐标系下的建图结果。
 
-### 1.4 车体配置
+### 1.5 车体配置
 
 车体尺寸、坐标系、MID360 外参和点云切片参数集中在：
 
@@ -171,7 +206,9 @@ global_relocalization_kiss_matcher
 | 现象 | 根因 | 处理 |
 | --- | --- | --- |
 | `/usr/bin/env: 'bash\r': No such file or directory` | 脚本被 Windows/CRLF 行尾污染，Linux 把解释器读成 `bash\r` | 执行 `sed -i 's/\r$//' scripts/*.sh && chmod +x scripts/*.sh`；仓库已用 `.gitattributes` 固定脚本 LF 行尾 |
+| `install/setup.bash: line 11: COLCON_TRACE: unbound variable` | 调用脚本启用了 `set -u`，而 colcon 生成的 setup 脚本会读取未定义变量 | CPU 分支的一键脚本已在 source 前后临时关闭/恢复 `set -u`；更新脚本后重新运行 |
 | `error: 'clamp' is not a member of 'std'` | `livox_ros_driver2` 默认 C++14，但源码使用了 C++17 的 `std::clamp` | CPU 分支已改为 C++14 兼容边界判断；更新分支后重新执行 `./build_cpu_real.sh` |
+| `package 'pointcloud_to_laserscan' not found` | 车端未安装 ROS 运行依赖 | 执行 `rosdep install --from-paths src --ignore-src --rosdistro humble -r -y`，或安装 `ros-humble-pointcloud-to-laserscan`、`ros-humble-slam-toolbox`、`ros-humble-nav2-bringup` |
 
 编译完成后加载工作空间：
 
@@ -398,6 +435,7 @@ launch 会在 `mid360.yaml` 基础上覆盖：
 | `target_frame` | `livox_frame` | 切片参考坐标系 |
 | `min_height` | `0.2` | 丢弃低于该高度的点 |
 | `max_height` | `1.0` | 丢弃高于该高度的点 |
+| `qos_overrides./scan.publisher.reliability` | `reliable` | 让 `/scan` 发布端兼容 SLAM Toolbox 的可靠订阅 |
 | `angle_min/max` | `-pi` / `pi` | 生成 360 度 LaserScan |
 | `angle_increment` | `0.0087` | 约 0.5 度角分辨率 |
 | `range_min/max` | `0.05` / `70.0` | LaserScan 有效距离范围 |
@@ -496,7 +534,9 @@ ros2 topic hz /livox/imu
 ros2 topic hz /cloud_registered
 ros2 topic hz /registered_scan
 ros2 topic hz /scan
+ros2 topic info /scan -v
 ros2 topic hz /odom
+ros2 run tf2_ros tf2_echo map odom
 ```
 
 导航验收：
@@ -512,6 +552,8 @@ ros2 topic echo /cmd_vel
 - `/cmd_vel` 输出平滑，底盘能正常订阅。
 - `map -> odom` 只有一个发布源。
 - RViz 中 `/map`、`/scan`、局部/全局 costmap 正常。
+- 建图刚启动且 `/scan` 还没有被 SLAM Toolbox 消费前，RViz 可能短暂提示 `map` frame 不存在；如果 `/scan` 有频率且 `ros2 run tf2_ros tf2_echo map odom` 很快有输出，则属于正常启动过程。
+- 如果持续提示 `New subscription discovered on topic '/scan', requesting incompatible QoS`，检查 `ros2 topic info /scan -v`，确认 `/scan` publisher 的 reliability 是 `RELIABLE`，并重新构建/重新 source 后再启动。
 - 如果重定位失败，优先检查 `map_name`、`prior_pcd_file`、外参、初始位姿和 `/registered_scan` 点数。
 
 实车启动和验收必须在实际 MID360、底盘、电源、急停和人工接管正常的环境中完成。
