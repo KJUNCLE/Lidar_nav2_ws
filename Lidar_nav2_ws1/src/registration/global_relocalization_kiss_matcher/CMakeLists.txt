@@ -1,0 +1,100 @@
+cmake_minimum_required(VERSION 3.22)
+project(global_relocalization_kiss_matcher)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Set a default build type if none is specified
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to 'Release' as none was specified.")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+    # Provide options for cmake-gui or ccmake
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+cmake_policy(SET CMP0074 NEW)
+
+option(USE_ADDRESS_SANITIZER "Use address sanitizer" OFF)
+if (USE_ADDRESS_SANITIZER)
+    add_compile_options(-fsanitize=address -fsanitize-recover=address)
+    add_link_options(-fsanitize=address -fsanitize-recover=address)
+endif()
+
+set(KISS_MATCHER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/KISS-Matcher/cpp/kiss_matcher")
+if(EXISTS "${KISS_MATCHER_SOURCE_DIR}/CMakeLists.txt")
+  set(USE_SYSTEM_TBB ON CACHE BOOL "Use system pre-installed oneAPI/tbb")
+  set(USE_SYSTEM_ROBIN ON CACHE BOOL "Use system pre-installed ROBIN from SPARK @ MIT")
+  add_subdirectory("${KISS_MATCHER_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/kiss_matcher")
+else()
+  find_package(TBB REQUIRED)
+  find_package(robin REQUIRED)
+  find_package(kiss_matcher REQUIRED)
+endif()
+
+find_package(small_gicp REQUIRED)
+if(TARGET small_gicp::small_gicp)
+  set(SMALL_GICP_TARGET small_gicp::small_gicp)
+else()
+  set(SMALL_GICP_TARGET small_gicp)
+endif()
+
+find_package(ament_cmake REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(rcutils REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(PCL REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+
+include_directories(
+    include
+    src
+    ${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+find_package(OpenMP REQUIRED)
+
+add_library(global_kiss_matcher_relocalization_node SHARED
+  src/global_kiss_matcher_relocalization.cpp
+  src/slam/loop_closure.cpp
+)
+target_include_directories(global_kiss_matcher_relocalization_node PUBLIC include)
+target_link_libraries(global_kiss_matcher_relocalization_node
+  ${PCL_LIBRARIES}
+  ${SMALL_GICP_TARGET}
+  OpenMP::OpenMP_CXX
+  kiss_matcher::kiss_matcher_core
+)
+ament_target_dependencies(global_kiss_matcher_relocalization_node
+  rclcpp
+  rclcpp_components
+  sensor_msgs
+  geometry_msgs
+  nav_msgs
+  tf2_ros
+  tf2_eigen
+  pcl_conversions
+)
+rclcpp_components_register_node(global_kiss_matcher_relocalization_node
+  PLUGIN "global_kiss_matcher_relocalization::GlobalKissMatcherRelocalizationNode"
+  EXECUTABLE global_kiss_matcher_relocalization_exec
+)
+
+install(TARGETS
+  global_kiss_matcher_relocalization_node
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+ament_package()

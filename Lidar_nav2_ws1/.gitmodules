@@ -1,0 +1,6 @@
+[submodule "lib/robin-map"]
+	path = lib/robin-map
+	url = https://github.com/Tessil/robin-map.git
+[submodule "third_party/KISS-Matcher"]
+	path = third_party/KISS-Matcher
+	url = git@github.com:KJUNCLE/KISS-Matcher.git
