@@ -15,13 +15,13 @@ from cpu_real_common import build_robot_description, load_vehicle_config
 
 def _launch_setup(context, *args, **kwargs):
     me_share = get_package_share_directory("me_nav2_bringup")
-    livox_share = get_package_share_directory("livox_ros_driver2")
 
     vehicle_config_file = LaunchConfiguration("vehicle_config_file").perform(context)
     fast_lio_config_file = LaunchConfiguration("fast_lio_config_file").perform(context)
     slam_params_file = LaunchConfiguration("slam_params_file").perform(context)
     pointcloud_to_laserscan_params_file = LaunchConfiguration("pointcloud_to_laserscan_params_file").perform(context)
     rviz_config_file = LaunchConfiguration("rviz_config_file").perform(context)
+    livox_config_file = LaunchConfiguration("livox_config_file").perform(context)
 
     vehicle = load_vehicle_config(vehicle_config_file)
     map_name = LaunchConfiguration("map_name").perform(context)
@@ -63,7 +63,7 @@ def _launch_setup(context, *args, **kwargs):
                 "output_data_type": 0,
                 "frame_id": vehicle["lidar_frame"],
                 "lvx_file_path": "",
-                "user_config_path": os.path.join(livox_share, "config", "MID360_config.json"),
+                "user_config_path": livox_config_file,
                 "cmdline_input_bd_code": "livox0000000001",
             }
         ],
@@ -187,6 +187,12 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "rviz_config_file",
                 default_value=os.path.join(me_share, "rviz", "nav2.rviz"),
+            ),
+            DeclareLaunchArgument(
+                "livox_config_file",
+                default_value=os.path.join(
+                    get_package_share_directory("livox_ros_driver2"), "config", "MID360s_config.json"
+                ),
             ),
             DeclareLaunchArgument("use_rviz", default_value="false"),
             DeclareLaunchArgument(
