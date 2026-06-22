@@ -42,6 +42,22 @@ Save the 2D map:
 ./save_map.sh site_a
 ```
 
+Save the FAST-LIO 3D PCD:
+
+```bash
+./save_pcd.sh
+```
+
+Generated files:
+
+```text
+src/me_nav2_bringup/map/site_a.yaml
+src/me_nav2_bringup/map/site_a.pgm
+install/me_nav2_bringup/share/me_nav2_bringup/pcd/site_a.pcd
+```
+
+`save_pcd.sh` does not accept a map-name argument. The PCD path is decided when mapping starts through `map_name` or `prior_pcd_file`; pass `prior_pcd_file:=/abs/site_a.pcd` if the PCD must be written to a fixed source-tree path.
+
 Navigation:
 
 ```bash

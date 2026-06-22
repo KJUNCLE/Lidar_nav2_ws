@@ -46,13 +46,21 @@ cd ~/Lidar_nav2_ws/scripts
 ./save_map.sh site_a
 ```
 
-FAST-LIO 会按 `map_name` 保存/使用 PCD：
+保存 FAST-LIO 3D PCD：
+
+```bash
+./save_pcd.sh
+```
+
+地图文件：
 
 ```text
 src/me_nav2_bringup/map/site_a.yaml
 src/me_nav2_bringup/map/site_a.pgm
-src/me_nav2_bringup/pcd/site_a.pcd
+install/me_nav2_bringup/share/me_nav2_bringup/pcd/site_a.pcd
 ```
+
+`save_pcd.sh` 不接收地图名参数；PCD 路径由启动建图时的 `map_name` 或 `prior_pcd_file` 决定。需要固定写到源码树时，启动建图时传入 `prior_pcd_file:=/abs/site_a.pcd`。
 
 导航：
 
@@ -89,7 +97,7 @@ tsl-robin-map
 ## 关键配置
 
 - `src/me_nav2_bringup/config/vehicle.yaml`：frame 名称、footprint、MID360 外参、FAST-LIO 参数、点云切片高度。
-- `src/livox_ros_driver2/config/MID360_config.json`：MID360 IP 和主机网卡配置。
+- `src/livox_ros_driver2-master/config/MID360s_config.json`：MID360s IP 和主机网卡配置。
 - `src/me_nav2_bringup/config/nav2_params.yaml`：Nav2 控制器、规划器、代价地图参数。
 - `src/me_nav2_bringup/config/slam_toolbox_params.yaml`：2D SLAM 参数。
 - `src/me_nav2_bringup/config/Pointcloud2d_3d.yaml`：3D 点云转 2D LaserScan 参数。

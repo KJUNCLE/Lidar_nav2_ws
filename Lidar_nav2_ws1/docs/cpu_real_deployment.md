@@ -43,17 +43,17 @@ source /opt/ros/humble/setup.bash
 ping <MID360_IP>
 ```
 
-确认 MID360 配置文件：
+确认 MID360s 配置文件：
 
 ```bash
-vim src/livox_ros_driver2/config/MID360_config.json
+vim src/livox_ros_driver2-master/config/MID360s_config.json
 ```
 
 重点检查：
 
 - `host_net_info` 中的主机 IP 是否是连接 MID360 的网卡 IP。
-- `lidar_configs` 中的 MID360 IP 是否与实际设备一致。
-- 主机和 MID360 是否在同一网段。
+- `lidar_configs` 中的 MID360s IP 是否与实际设备一致。
+- 主机和 MID360s 是否在同一网段。
 
 ### 1.3 地图命名规则
 
@@ -62,7 +62,7 @@ vim src/livox_ros_driver2/config/MID360_config.json
 ```text
 2D map: src/me_nav2_bringup/map/<map_name>.yaml
 2D pgm: src/me_nav2_bringup/map/<map_name>.pgm
-3D pcd: src/me_nav2_bringup/pcd/<map_name>.pcd
+3D pcd: <me_nav2_bringup package share>/pcd/<map_name>.pcd
 ```
 
 例如 `map_name:=site_a` 对应：
@@ -70,8 +70,10 @@ vim src/livox_ros_driver2/config/MID360_config.json
 ```text
 src/me_nav2_bringup/map/site_a.yaml
 src/me_nav2_bringup/map/site_a.pgm
-src/me_nav2_bringup/pcd/site_a.pcd
+install/me_nav2_bringup/share/me_nav2_bringup/pcd/site_a.pcd
 ```
+
+`save_map.sh` 会把 2D 地图写入源码树的 `src/me_nav2_bringup/map/`。FAST-LIO 的 3D PCD 由建图启动时的 `prior_pcd_file` 决定；默认路径来自 ROS package share，通常是 `install/me_nav2_bringup/share/me_nav2_bringup/pcd/<map_name>.pcd`。如果希望 PCD 固定写到源码树，请在启动建图时显式传入 `prior_pcd_file:=/abs/path/<map_name>.pcd`。
 
 导航时必须保证 2D map 和 3D PCD 来自同一次或同一坐标系下的建图结果。
 
@@ -218,7 +220,7 @@ ros2 topic hz /odom
 ros2 run tf2_ros tf2_echo odom base_footprint
 ```
 
-### 2.3 保存 2D 地图
+### 2.3 保存 2D 地图和 3D PCD
 
 建图完成后，在另一个已加载工作空间的终端执行：
 
@@ -250,7 +252,23 @@ src/me_nav2_bringup/map/site_a.pgm
 FAST-LIO 的 PCD 保存由 `/map_save` 服务触发，默认路径由 `prior_pcd_file` 或 `map_name` 推导。项目里的 `scripts/save_pcd.sh` 会调用该服务；保存后确认目标文件最终存在：
 
 ```bash
-ls src/me_nav2_bringup/pcd/site_a.pcd
+./save_pcd.sh
+ls install/me_nav2_bringup/share/me_nav2_bringup/pcd/site_a.pcd
+```
+
+注意：`save_pcd.sh` 不接收地图名参数，`./save_pcd.sh test123` 和 `./save_pcd.sh` 的效果相同。PCD 的文件名和路径必须在启动建图时指定：
+
+```bash
+./mapping_real.sh \
+  map_name:=site_a \
+  prior_pcd_file:=$PWD/../src/me_nav2_bringup/pcd/site_a.pcd
+```
+
+如果找不到 PCD，以建图终端中的 `Saving map to ...` 日志为准，也可以直接查找：
+
+```bash
+find ~/Lidar_nav2_ws -name "site_a.pcd" -type f -print
+find ~/Lidar_nav2_ws -name "*.pcd" -type f -printf "%TY-%Tm-%Td %TH:%TM %p\n" | sort
 ```
 
 ### 2.4 实车导航
@@ -325,6 +343,7 @@ ros2 launch me_nav2_bringup cpu_real_mapping.launch.py --show-args
 | `slam_params_file` | `me_nav2_bringup/config/slam_toolbox_params.yaml` | SLAM Toolbox 建图参数 | 修改 2D SLAM 行为时 | `slam_params_file:=/abs/slam.yaml` |
 | `pointcloud_to_laserscan_params_file` | `me_nav2_bringup/config/Pointcloud2d_3d.yaml` | 3D 点云切片基础参数 | 切片角度/距离配置变化时 | `pointcloud_to_laserscan_params_file:=/abs/scan.yaml` |
 | `rviz_config_file` | `me_nav2_bringup/rviz/nav2.rviz` | RViz 配置 | 使用自定义可视化布局时 | `rviz_config_file:=/abs/view.rviz` |
+| `livox_config_file` | `livox_ros_driver2/config/MID360s_config.json` | Livox 驱动网络配置 | 现场需要回退或使用另一份配置时 | `livox_config_file:=/abs/MID360s_config.json` |
 | `use_rviz` | `false` | 是否启动 RViz | 调试时设为 `true` | `use_rviz:=true` |
 | `prior_pcd_file` | `me_nav2_bringup/pcd/<map_name>.pcd` | FAST-LIO PCD 保存目标路径 | 需要保存到指定路径时 | `prior_pcd_file:=/abs/site_a.pcd` |
 
@@ -348,6 +367,7 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 | `fast_lio_config_file` | `fast_lio/config/mid360.yaml` | FAST-LIO 基础参数文件 | 需要独立 FAST-LIO 配置时 | `fast_lio_config_file:=/abs/mid360.yaml` |
 | `pointcloud_to_laserscan_params_file` | `me_nav2_bringup/config/Pointcloud2d_3d.yaml` | 3D 点云切片基础参数 | 调整 `/scan` 分辨率/距离时 | `pointcloud_to_laserscan_params_file:=/abs/scan.yaml` |
 | `rviz_config_file` | `me_nav2_bringup/rviz/nav2.rviz` | RViz 配置 | 调试导航时 | `rviz_config_file:=/abs/view.rviz` |
+| `livox_config_file` | `livox_ros_driver2/config/MID360s_config.json` | Livox 驱动网络配置 | 现场需要回退或使用另一份配置时 | `livox_config_file:=/abs/MID360s_config.json` |
 | `use_rviz` | `false` | 是否启动 RViz | 调试时设为 `true` | `use_rviz:=true` |
 | `relocalizer` | `small_gicp` | 选择 3D 重定位后端 | 未知起点设为 `kiss` | `relocalizer:=kiss` |
 | `map_yaml_file` | `me_nav2_bringup/map/<map_name>.yaml` | Nav2 2D 地图路径 | 地图不按 `map_name` 存放时 | `map_yaml_file:=/abs/site_a.yaml` |
@@ -357,20 +377,20 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 
 ## 4. 固定节点参数说明
 
-### 4.1 MID360 驱动
+### 4.1 MID360s 驱动
 
-`cpu_real_mapping.launch.py` 和 `cpu_real_nav.launch.py` 内部固定启动 `livox_ros_driver2_node`：
+`cpu_real_mapping.launch.py` 和 `cpu_real_nav.launch.py` 内部固定启动 `livox_ros_driver2_node`，默认按实测可用的 MID360s 配置取数：
 
 | 参数 | 固定值 | 用处 |
 | --- | --- | --- |
 | `xfer_format` | `1` | 输出 Livox CustomMsg，供 FAST-LIO `lidar_type=1` 使用 |
-| `multi_topic` | `0` | 多雷达共用话题；单 MID360 保持默认 |
+| `multi_topic` | `0` | 多雷达共用话题；单 MID360s 保持默认 |
 | `data_src` | `0` | 从真实 LiDAR 取数 |
 | `publish_freq` | `10.0` | 驱动发布频率 |
 | `output_data_type` | `0` | 驱动输出类型 |
 | `frame_id` | 来自 `vehicle.yaml` 的 `lidar_frame` | LiDAR 坐标系 |
-| `user_config_path` | `livox_ros_driver2/config/MID360_config.json` | MID360 网络配置 |
-| `cmdline_input_bd_code` | `livox0000000001` | 广播码占位，实际连接主要看 MID360 配置 |
+| `user_config_path` | 来自 `livox_config_file`，默认 `livox_ros_driver2/config/MID360s_config.json` | MID360s 网络配置 |
+| `cmdline_input_bd_code` | `livox0000000001` | 广播码占位，实际连接主要看 MID360s 配置 |
 
 ### 4.2 FAST-LIO 覆盖参数
 
@@ -452,7 +472,7 @@ ros2 launch me_nav2_bringup cpu_real_mapping.launch.py map_name:=site_a use_rviz
 如果需要拆节点定位问题，可按链路理解和分段检查：
 
 ```bash
-ros2 launch livox_ros_driver2 fast_lio_msg_MID360_launch.py
+ros2 launch livox_ros_driver2 msg_MID360s_launch.py
 ros2 launch fast_lio mapping.launch.py rviz:=false
 ros2 launch lio_interface lio_interface_launch.py
 ros2 launch sensor_scan_generation sensor_scan_generation_launch.py

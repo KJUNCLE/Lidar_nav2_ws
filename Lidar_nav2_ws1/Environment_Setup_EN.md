@@ -79,14 +79,14 @@ sudo apt install -y \
 Edit the Livox config:
 
 ```bash
-vim src/livox_ros_driver2/config/MID360_config.json
+vim src/livox_ros_driver2-master/config/MID360s_config.json
 ```
 
 Check that:
 
 - `host_net_info` matches the wired host NIC IP.
-- `lidar_configs` matches the real MID360 IP.
-- Host and MID360 are on the same subnet.
+- `lidar_configs` matches the real MID360s IP.
+- Host and MID360s are on the same subnet.
 
 Connectivity check:
 
@@ -136,6 +136,14 @@ Save 2D map:
 ./save_map.sh site_a
 ```
 
+Save the FAST-LIO 3D PCD:
+
+```bash
+./save_pcd.sh
+```
+
+`save_pcd.sh` does not accept a map-name argument. The PCD path is decided when mapping starts through `map_name` or `prior_pcd_file`; by default it is usually under `install/me_nav2_bringup/share/me_nav2_bringup/pcd/<map_name>.pcd`.
+
 Navigation:
 
 ```bash
@@ -167,6 +175,7 @@ cd ~/Lidar_nav2_ws/scripts
 ./build.sh
 ./mapping_real.sh map_name:=site_a
 ./save_map.sh site_a
+./save_pcd.sh
 ./nav2_real.sh map_name:=site_a relocalizer:=small_gicp
 ./nav2_real.sh map_name:=site_a relocalizer:=kiss
 ./show_tf_tree.sh
