@@ -7,9 +7,11 @@ LioInterface::LioInterface(const rclcpp::NodeOptions & options)
 : Node("lio_interface", options){
 
     this->declare_parameter("odometry_sub", "Odometry");
+    this->declare_parameter("cloud_sub", "/cloud_registered");
     this->declare_parameter("base_frame", "base_footprint");
     this->declare_parameter("lidar_frame", "livox_frame");
     this->get_parameter("odometry_sub", odometry_sub_);
+    this->get_parameter("cloud_sub", cloud_sub_);
     this->get_parameter("base_frame", base_frame_);
     this->get_parameter("lidar_frame", lidar_frame_);
 
@@ -25,7 +27,7 @@ LioInterface::LioInterface(const rclcpp::NodeOptions & options)
     odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/registered_odometry", 5);
 
     pcd_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "/cloud_registered", rclcpp::SensorDataQoS(),
+        cloud_sub_, rclcpp::SensorDataQoS(),
         std::bind(&LioInterface::pointCloudCallback, this, std::placeholders::_1));
 
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(

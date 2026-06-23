@@ -140,6 +140,7 @@ source /opt/ros/humble/setup.bash
 ```text
 small_gicp
 livox_ros_driver2
+livox_sdk2
 fast_lio
 lio_interface
 sensor_scan_generation
@@ -151,6 +152,14 @@ global_relocalization_kiss_matcher
 ```
 
 它不会全量编译 CUDA、Open3D、RTAB-Map、Gazebo 仿真、Point-LIO 等非本阶段部署包。
+
+如果要启用 humanoid 可选后端，单独执行：
+
+```bash
+Open3D_DIR=/abs/path/to/Open3DConfig.cmake-directory ./build_humanoid_localization.sh
+```
+
+`Open3D_DIR` 应指向包含 `Open3DConfig.cmake` 的目录。这个脚本会先编译 `livox_sdk2` 和 `livox_ros_driver2`，再编译 `fast_lio_humanoid` 和 `open3d_loc_humanoid`。没有 Open3D 时不要跑这个脚本。
 
 脚本固定使用：
 
@@ -304,6 +313,14 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py ...
 
 脚本内部在 `source install/setup.bash` 前临时关闭 `set -u`，加载完成后再恢复，避免 ROS 2/colcon 生成的 setup 脚本因未绑定变量让导航启动脚本提前退出。
 
+Humanoid 可选后端：
+
+```bash
+./nav2_real.sh map_name:=site_a localization_backend:=humanoid
+```
+
+这个模式会启动 `fast_lio_humanoid + open3d_loc_humanoid`，并关闭 `small_gicp/kiss` 重定位节点。`relocalizer` 参数在 humanoid 模式下不再生效。
+
 启动内容是在建图链路基础上增加：
 
 | 节点/组件 | 作用 |
@@ -343,7 +360,9 @@ ros2 launch me_nav2_bringup cpu_real_mapping.launch.py --show-args
 | --- | --- | --- | --- | --- |
 | `vehicle_config_file` | `me_nav2_bringup/config/vehicle.yaml` | 车体尺寸、TF、话题、外参集中配置 | 使用另一套车体配置时 | `vehicle_config_file:=/abs/vehicle.yaml` |
 | `map_name` | `nav_test_4_27` | 推导默认 PCD 文件名 | 每个场地/路线建图时修改 | `map_name:=site_a` |
+| `localization_backend` | `standard` | 选择标准后端或 humanoid 后端 | 需要启用 humanoid 定位时 | `localization_backend:=humanoid` |
 | `fast_lio_config_file` | `fast_lio/config/mid360.yaml` | FAST-LIO 基础参数文件 | 需要独立 FAST-LIO 配置时 | `fast_lio_config_file:=/abs/mid360.yaml` |
+| `humanoid_fast_lio_config_file` | 空，humanoid 时回退到 `fast_lio_humanoid/config/mid360.yaml` | humanoid 后端的 FAST-LIO 参数文件 | 需要独立 humanoid FAST-LIO 配置时 | `humanoid_fast_lio_config_file:=/abs/mid360.yaml` |
 | `slam_params_file` | `me_nav2_bringup/config/slam_toolbox_params.yaml` | SLAM Toolbox 建图参数 | 修改 2D SLAM 行为时 | `slam_params_file:=/abs/slam.yaml` |
 | `pointcloud_to_laserscan_params_file` | `me_nav2_bringup/config/Pointcloud2d_3d.yaml` | 3D 点云切片基础参数 | 切片角度/距离配置变化时 | `pointcloud_to_laserscan_params_file:=/abs/scan.yaml` |
 | `rviz_config_file` | `me_nav2_bringup/rviz/nav2.rviz` | RViz 配置 | 使用自定义可视化布局时 | `rviz_config_file:=/abs/view.rviz` |
@@ -367,8 +386,10 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 | --- | --- | --- | --- | --- |
 | `vehicle_config_file` | `me_nav2_bringup/config/vehicle.yaml` | 车体尺寸、TF、话题、外参集中配置 | 使用另一套车体配置时 | `vehicle_config_file:=/abs/vehicle.yaml` |
 | `map_name` | `nav_test_4_27` | 同时推导 2D map 和 3D PCD | 换场地/地图时 | `map_name:=site_a` |
+| `localization_backend` | `standard` | 选择标准后端或 humanoid 后端 | 需要启用 humanoid 定位时 | `localization_backend:=humanoid` |
 | `nav2_params_file` | `me_nav2_bringup/config/nav2_params.yaml` | Nav2 行为树、规划、控制、代价地图参数 | 调速度、代价地图、规划器时 | `nav2_params_file:=/abs/nav2.yaml` |
 | `fast_lio_config_file` | `fast_lio/config/mid360.yaml` | FAST-LIO 基础参数文件 | 需要独立 FAST-LIO 配置时 | `fast_lio_config_file:=/abs/mid360.yaml` |
+| `humanoid_fast_lio_config_file` | 空，humanoid 时回退到 `fast_lio_humanoid/config/mid360.yaml` | humanoid 后端的 FAST-LIO 参数文件 | 需要独立 humanoid FAST-LIO 配置时 | `humanoid_fast_lio_config_file:=/abs/mid360.yaml` |
 | `pointcloud_to_laserscan_params_file` | `me_nav2_bringup/config/Pointcloud2d_3d.yaml` | 3D 点云切片基础参数 | 调整 `/scan` 分辨率/距离时 | `pointcloud_to_laserscan_params_file:=/abs/scan.yaml` |
 | `rviz_config_file` | `me_nav2_bringup/rviz/nav2.rviz` | RViz 配置 | 调试导航时 | `rviz_config_file:=/abs/view.rviz` |
 | `livox_config_file` | `livox_ros_driver2/config/MID360s_config.json` | Livox 驱动网络配置 | 现场需要回退或使用另一份配置时 | `livox_config_file:=/abs/MID360s_config.json` |
@@ -378,6 +399,13 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 | `prior_pcd_file` | `me_nav2_bringup/pcd/<map_name>.pcd` | 3D 重定位先验 PCD | PCD 不按 `map_name` 存放时 | `prior_pcd_file:=/abs/site_a.pcd` |
 
 `cpu_real_nav.launch.py` 会把 `vehicle.yaml` 中的 `footprint` 和 frame 名称重写到 Nav2 参数中，避免 `nav2_params.yaml` 和车体配置不一致。`map_server` 只接收 `yaml_filename` 和 `use_sim_time`，Nav2 的完整参数文件通过 `navigation_launch.py` 传入。
+
+当 `localization_backend:=humanoid` 时，启动链路会改为：
+
+- `fast_lio_humanoid` 发布 `/Odometry_loc` 和 `/cloud_registered_1`
+- `lio_interface` 改为订阅 `/Odometry_loc` 和 `/cloud_registered_1`
+- `open3d_loc_humanoid` 订阅 `/Odometry_loc`、`/cloud_registered_1`，并加载 `prior_pcd_file`
+- `small_gicp/kiss` 不再启动，避免同时发布 `map -> odom`
 
 ## 4. 固定节点参数说明
 
@@ -412,6 +440,8 @@ launch 会在 `mid360.yaml` 基础上覆盖：
 | `pcd_save.pcd_save_en` | `true` | 允许保存 PCD |
 | `pcd_save.interval` | `-1` | 全部帧保存到一个 PCD |
 | `map_file_path` | `prior_pcd_file` | PCD 输出路径 |
+
+humanoid 模式下，launch 会把 `pcd_save.pcd_save_en` 关掉，避免和 `open3d_loc_humanoid` 的在线定位链路混用保存逻辑。
 
 ### 4.3 点云切片
 
@@ -463,6 +493,35 @@ launch 会在 `mid360.yaml` 基础上覆盖：
 - `kiss` 适合未知起点或丢定位恢复。
 - 两者不能同时运行，否则会有两个 `map -> odom` 发布源。
 
+### 4.5 Humanoid 可选后端
+
+`localization_backend:=humanoid` 时，导航和建图都切到 humanoid 定位链路：
+
+| 项目 | 输入/输出 |
+| --- | --- |
+| FAST-LIO 输入 | `/livox/lidar`, `/livox/imu` |
+| FAST-LIO 输出 | `/Odometry_loc`, `/cloud_registered_1` |
+| LIO 接口输入 | `/Odometry_loc`, `/cloud_registered_1` |
+| Open3D 输入 | `prior_pcd_file`，传入节点参数 `path_map` |
+| Open3D 输出 | `/localization_3d`, `/localization_3d_confidence`, `/localization_3d_delay_ms`, `map -> odom` |
+
+默认参数来自 `vehicle.yaml` 的 `humanoid_localization` 小节：
+
+| 字段 | 默认值 |
+| --- | --- |
+| `base_frame` | `base_footprint` |
+| `imu_frame` | `livox_frame` |
+| `motion_frame` | `chassis` |
+| `input_odometry_topic` | `/Odometry_loc` |
+| `input_cloud_topic` | `/cloud_registered_1` |
+| `voxelsize_coarse` | `0.01` |
+| `voxelsize_fine` | `0.2` |
+| `threshold_fitness` | `0.5` |
+| `threshold_fitness_init` | `0.5` |
+| `loc_frequence` | `2.5` |
+
+这个后端需要先安装 Open3D，再用 `./build_humanoid_localization.sh` 单独构建。
+
 ## 5. 逐步启动/调试命令
 
 ### 5.1 建图链路逐步调试
@@ -492,6 +551,15 @@ ros2 launch slam_toolbox online_async_launch.py slam_params_file:=src/me_nav2_br
 
 ```bash
 ros2 launch me_nav2_bringup cpu_real_nav.launch.py map_name:=site_a relocalizer:=small_gicp use_rviz:=true
+```
+
+humanoid 模式：
+
+```bash
+ros2 launch me_nav2_bringup cpu_real_nav.launch.py \
+  map_name:=site_a \
+  localization_backend:=humanoid \
+  use_rviz:=true
 ```
 
 单独验证重定位参数：
@@ -529,6 +597,15 @@ ros2 topic hz /odom
 ros2 run tf2_ros tf2_echo map odom
 ros2 lifecycle get /controller_server
 ros2 topic echo /cmd_vel
+```
+
+humanoid 模式额外检查：
+
+```bash
+ros2 topic hz /Odometry_loc
+ros2 topic hz /cloud_registered_1
+ros2 topic hz /localization_3d
+ros2 run tf2_ros tf2_echo map odom
 ```
 
 检查原则：

@@ -11,7 +11,7 @@ from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
 
 sys.path.insert(0, os.path.dirname(__file__))
-from cpu_real_common import build_robot_description, footprint_to_string, load_vehicle_config
+from cpu_real_common import build_humanoid_open3d_params, build_robot_description, footprint_to_string, load_vehicle_config
 
 
 def _make_nav2_params(nav2_params_file, vehicle):
@@ -40,7 +40,9 @@ def _launch_setup(context, *args, **kwargs):
 
     vehicle_config_file = LaunchConfiguration("vehicle_config_file").perform(context)
     nav2_params_file = LaunchConfiguration("nav2_params_file").perform(context)
+    localization_backend = LaunchConfiguration("localization_backend").perform(context).lower()
     fast_lio_config_file = LaunchConfiguration("fast_lio_config_file").perform(context)
+    humanoid_fast_lio_config_file = LaunchConfiguration("humanoid_fast_lio_config_file").perform(context)
     pointcloud_to_laserscan_params_file = LaunchConfiguration("pointcloud_to_laserscan_params_file").perform(context)
     rviz_config_file = LaunchConfiguration("rviz_config_file").perform(context)
     relocalizer = LaunchConfiguration("relocalizer").perform(context).lower()
@@ -49,6 +51,10 @@ def _launch_setup(context, *args, **kwargs):
     livox_config_file = LaunchConfiguration("livox_config_file").perform(context)
 
     vehicle = load_vehicle_config(vehicle_config_file)
+    if localization_backend not in ("standard", "humanoid"):
+        raise RuntimeError("localization_backend must be 'standard' or 'humanoid'")
+
+    use_humanoid_backend = localization_backend == "humanoid"
     robot_description = build_robot_description(vehicle)
     configured_nav2_params = _make_nav2_params(nav2_params_file, vehicle)
 
@@ -59,6 +65,13 @@ def _launch_setup(context, *args, **kwargs):
     if not prior_pcd_file:
         map_name = LaunchConfiguration("map_name").perform(context)
         prior_pcd_file = os.path.join(me_share, "pcd", f"{map_name}.pcd")
+
+    fast_lio_package = "fast_lio_humanoid" if use_humanoid_backend else "fast_lio"
+    if use_humanoid_backend and not humanoid_fast_lio_config_file:
+        humanoid_fast_lio_config_file = os.path.join(
+            get_package_share_directory("fast_lio_humanoid"), "config", "mid360.yaml"
+        )
+    selected_fast_lio_config_file = humanoid_fast_lio_config_file if use_humanoid_backend else fast_lio_config_file
 
     livox_node = Node(
         package="livox_ros_driver2",
@@ -105,11 +118,11 @@ def _launch_setup(context, *args, **kwargs):
     )
 
     fast_lio_node = Node(
-        package="fast_lio",
+        package=fast_lio_package,
         executable="fastlio_mapping",
         output="screen",
         parameters=[
-            fast_lio_config_file,
+            selected_fast_lio_config_file,
             {
                 "use_sim_time": False,
                 "common.lid_topic": vehicle["lidar_topic"],
@@ -120,7 +133,7 @@ def _launch_setup(context, *args, **kwargs):
                 "preprocess.timestamp_unit": int(vehicle["fast_lio"]["timestamp_unit"]),
                 "mapping.extrinsic_T": vehicle["fast_lio"]["extrinsic_T"],
                 "mapping.extrinsic_R": vehicle["fast_lio"]["extrinsic_R"],
-                "pcd_save.pcd_save_en": True,
+                "pcd_save.pcd_save_en": False,
                 "pcd_save.interval": -1,
                 "map_file_path": prior_pcd_file,
             },
@@ -135,7 +148,8 @@ def _launch_setup(context, *args, **kwargs):
         parameters=[
             {
                 "use_sim_time": False,
-                "odometry_sub": "/Odometry",
+                "odometry_sub": "/Odometry_loc" if use_humanoid_backend else "/Odometry",
+                "cloud_sub": "/cloud_registered_1" if use_humanoid_backend else "/cloud_registered",
                 "base_frame": vehicle["base_frame"],
                 "lidar_frame": vehicle["lidar_frame"],
             }
@@ -185,9 +199,20 @@ def _launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
-    relocalizer_node = None
-    if relocalizer == "kiss":
-        relocalizer_node = Node(
+    localization_node = None
+    if use_humanoid_backend:
+        localization_node = Node(
+            package="open3d_loc_humanoid",
+            executable="global_localization_node",
+            output="screen",
+            emulate_tty=True,
+            parameters=[
+                os.path.join(get_package_share_directory("open3d_loc_humanoid"), "config", "loc_param_g1.yaml"),
+                build_humanoid_open3d_params(vehicle, prior_pcd_file),
+            ],
+        )
+    elif relocalizer == "kiss":
+        localization_node = Node(
             package="global_relocalization_kiss_matcher",
             executable="global_kiss_matcher_relocalization_exec",
             output="screen",
@@ -219,7 +244,7 @@ def _launch_setup(context, *args, **kwargs):
             ],
         )
     else:
-        relocalizer_node = Node(
+        localization_node = Node(
             package="small_gicp_relocalization",
             executable="small_gicp_relocalization_node",
             output="screen",
@@ -264,7 +289,7 @@ def _launch_setup(context, *args, **kwargs):
                 sensor_scan_generation_node,
                 pointcloud_to_laserscan_node,
                 navigation_cmd,
-                relocalizer_node,
+                localization_node,
                 rviz_node,
             ],
         ),
@@ -281,6 +306,7 @@ def generate_launch_description():
                 default_value=os.path.join(me_share, "config", "vehicle.yaml"),
             ),
             DeclareLaunchArgument("map_name", default_value="nav_test_4_27"),
+            DeclareLaunchArgument("localization_backend", default_value="standard"),
             DeclareLaunchArgument(
                 "nav2_params_file",
                 default_value=os.path.join(me_share, "config", "nav2_params.yaml"),
@@ -289,6 +315,7 @@ def generate_launch_description():
                 "fast_lio_config_file",
                 default_value=os.path.join(get_package_share_directory("fast_lio"), "config", "mid360.yaml"),
             ),
+            DeclareLaunchArgument("humanoid_fast_lio_config_file", default_value=""),
             DeclareLaunchArgument(
                 "pointcloud_to_laserscan_params_file",
                 default_value=os.path.join(me_share, "config", "Pointcloud2d_3d.yaml"),

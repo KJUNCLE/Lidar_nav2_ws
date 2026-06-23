@@ -10,29 +10,42 @@ from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 sys.path.insert(0, os.path.dirname(__file__))
-from cpu_real_common import build_robot_description, load_vehicle_config
+from cpu_real_common import build_humanoid_open3d_params, build_robot_description, load_vehicle_config
 
 
 def _launch_setup(context, *args, **kwargs):
     me_share = get_package_share_directory("me_nav2_bringup")
 
     vehicle_config_file = LaunchConfiguration("vehicle_config_file").perform(context)
+    localization_backend = LaunchConfiguration("localization_backend").perform(context).lower()
     fast_lio_config_file = LaunchConfiguration("fast_lio_config_file").perform(context)
+    humanoid_fast_lio_config_file = LaunchConfiguration("humanoid_fast_lio_config_file").perform(context)
     slam_params_file = LaunchConfiguration("slam_params_file").perform(context)
     pointcloud_to_laserscan_params_file = LaunchConfiguration("pointcloud_to_laserscan_params_file").perform(context)
     rviz_config_file = LaunchConfiguration("rviz_config_file").perform(context)
     livox_config_file = LaunchConfiguration("livox_config_file").perform(context)
 
     vehicle = load_vehicle_config(vehicle_config_file)
+    if localization_backend not in ("standard", "humanoid"):
+        raise RuntimeError("localization_backend must be 'standard' or 'humanoid'")
+
+    use_humanoid_backend = localization_backend == "humanoid"
     map_name = LaunchConfiguration("map_name").perform(context)
     pcd_file = LaunchConfiguration("prior_pcd_file").perform(context)
     if not pcd_file:
         pcd_file = os.path.join(me_share, "pcd", f"{map_name}.pcd")
 
+    fast_lio_package = "fast_lio_humanoid" if use_humanoid_backend else "fast_lio"
+    if use_humanoid_backend and not humanoid_fast_lio_config_file:
+        humanoid_fast_lio_config_file = os.path.join(
+            get_package_share_directory("fast_lio_humanoid"), "config", "mid360.yaml"
+        )
+    selected_fast_lio_config_file = humanoid_fast_lio_config_file if use_humanoid_backend else fast_lio_config_file
+
     robot_description = build_robot_description(vehicle)
 
     fast_lio_params = [
-        fast_lio_config_file,
+        selected_fast_lio_config_file,
         {
             "use_sim_time": False,
             "common.lid_topic": vehicle["lidar_topic"],
@@ -43,7 +56,7 @@ def _launch_setup(context, *args, **kwargs):
             "preprocess.timestamp_unit": int(vehicle["fast_lio"]["timestamp_unit"]),
             "mapping.extrinsic_T": vehicle["fast_lio"]["extrinsic_T"],
             "mapping.extrinsic_R": vehicle["fast_lio"]["extrinsic_R"],
-            "pcd_save.pcd_save_en": True,
+            "pcd_save.pcd_save_en": not use_humanoid_backend,
             "pcd_save.interval": -1,
             "map_file_path": pcd_file,
         },
@@ -78,7 +91,7 @@ def _launch_setup(context, *args, **kwargs):
     )
 
     fast_lio_node = Node(
-        package="fast_lio",
+        package=fast_lio_package,
         executable="fastlio_mapping",
         output="screen",
         parameters=fast_lio_params,
@@ -92,7 +105,8 @@ def _launch_setup(context, *args, **kwargs):
         parameters=[
             {
                 "use_sim_time": False,
-                "odometry_sub": "/Odometry",
+                "odometry_sub": "/Odometry_loc" if use_humanoid_backend else "/Odometry",
+                "cloud_sub": "/cloud_registered_1" if use_humanoid_backend else "/cloud_registered",
                 "base_frame": vehicle["base_frame"],
                 "lidar_frame": vehicle["lidar_frame"],
             }
@@ -141,6 +155,19 @@ def _launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
+    humanoid_open3d_node = None
+    if use_humanoid_backend:
+        humanoid_open3d_node = Node(
+            package="open3d_loc_humanoid",
+            executable="global_localization_node",
+            output="screen",
+            emulate_tty=True,
+            parameters=[
+                os.path.join(get_package_share_directory("open3d_loc_humanoid"), "config", "loc_param_g1.yaml"),
+                build_humanoid_open3d_params(vehicle, pcd_file),
+            ],
+        )
+
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",
@@ -150,16 +177,17 @@ def _launch_setup(context, *args, **kwargs):
         condition=IfCondition(LaunchConfiguration("use_rviz")),
     )
 
-    return [
+    actions = [
         livox_node,
         robot_state_publisher,
         fast_lio_node,
         lio_interface_node,
         sensor_scan_generation_node,
         pointcloud_to_laserscan_node,
-        slam_launch,
-        rviz_node,
     ]
+    actions.append(humanoid_open3d_node if use_humanoid_backend else slam_launch)
+    actions.append(rviz_node)
+    return actions
 
 
 def generate_launch_description():
@@ -172,10 +200,12 @@ def generate_launch_description():
                 default_value=os.path.join(me_share, "config", "vehicle.yaml"),
             ),
             DeclareLaunchArgument("map_name", default_value="nav_test_4_27"),
+            DeclareLaunchArgument("localization_backend", default_value="standard"),
             DeclareLaunchArgument(
                 "fast_lio_config_file",
                 default_value=os.path.join(get_package_share_directory("fast_lio"), "config", "mid360.yaml"),
             ),
+            DeclareLaunchArgument("humanoid_fast_lio_config_file", default_value=""),
             DeclareLaunchArgument(
                 "slam_params_file",
                 default_value=os.path.join(me_share, "config", "slam_toolbox_params.yaml"),

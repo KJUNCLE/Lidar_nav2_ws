@@ -12,7 +12,7 @@
 - 预留传感器：同星 RTK-INSS5715，本阶段不进入定位闭环。
 - 里程计：FAST-LIO，订阅 `/livox/lidar` CustomMsg 和 `/livox/imu`。
 - 建图：FAST-LIO 3D PCD + `pointcloud_to_laserscan` + SLAM Toolbox 2D 栅格。
-- 定位：默认 `small_gicp_relocalization`，未知起点可切换 `global_relocalization_kiss_matcher`。
+- 定位：默认 `small_gicp_relocalization`，未知起点可切换 `global_relocalization_kiss_matcher`，也可显式启用 `localization_backend:=humanoid` 的 Open3D humanoid 后端。
 - 导航：Nav2，底盘接口固定为 `/cmd_vel`，消息类型 `geometry_msgs/msg/Twist`。
 
 目标 TF：
@@ -26,12 +26,17 @@ map -> odom -> base_footprint -> chassis -> livox_frame
 ```bash
 source /opt/ros/humble/setup.bash
 cd ~/Lidar_nav2_ws
-git submodule update --init --recursive
 cd scripts
 ./build.sh
 ```
 
 `scripts/build.sh` 等价于 `scripts/build_cpu_real.sh`，只构建实车白名单包。
+
+Humanoid 可选后端单独构建：
+
+```bash
+Open3D_DIR=/abs/path/to/Open3DConfig.cmake-directory ./build_humanoid_localization.sh
+```
 
 建图：
 
@@ -76,7 +81,7 @@ install/me_nav2_bringup/share/me_nav2_bringup/pcd/site_a.pcd
 
 ## 保留包
 
-CPU 分支默认工作区包列表应为：
+CPU 分支默认构建包列表为：
 
 ```text
 fast_lio
@@ -84,12 +89,20 @@ gld_robot_description
 global_relocalization_kiss_matcher
 lio_interface
 livox_ros_driver2
+livox_sdk2
 me_nav2_bringup
 pcd2pgm
 sensor_scan_generation
 small_gicp
 small_gicp_relocalization
 tsl-robin-map
+```
+
+可选 humanoid 后端包：
+
+```text
+fast_lio_humanoid
+open3d_loc_humanoid
 ```
 
 第三方 KISS-Matcher C++ 源码保留在 `third_party/KISS-Matcher`，通过 `third_party/COLCON_IGNORE` 退出 colcon 包扫描，仅作为 `global_relocalization_kiss_matcher` 的 CMake 依赖使用。

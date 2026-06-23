@@ -29,6 +29,7 @@ public:
 private:
 
     std::string odometry_sub_;
+    std::string cloud_sub_;
     std::string base_frame_;
     std::string lidar_frame_;
 

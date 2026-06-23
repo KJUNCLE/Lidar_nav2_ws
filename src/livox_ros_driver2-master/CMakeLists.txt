@@ -228,6 +228,10 @@ else(ROS_EDITION STREQUAL "ROS2")
   find_package(builtin_interfaces REQUIRED)
   find_package(rosidl_default_generators REQUIRED)
 
+  if(NOT DEFINED DISTRO_ROS AND DEFINED ENV{ROS_DISTRO})
+    set(DISTRO_ROS "$ENV{ROS_DISTRO}")
+  endif()
+
   # check apr
   find_package(PkgConfig)
   pkg_check_modules(APR apr-1)
@@ -245,12 +249,27 @@ else(ROS_EDITION STREQUAL "ROS2")
     LIBRARY_NAME ${PROJECT_NAME}
   )
 
-  ## make sure the livox_lidar_sdk_shared library is installed
-  find_library(LIVOX_LIDAR_SDK_LIBRARY liblivox_lidar_sdk_shared.so /usr/local/lib REQUIRED)
+  ## make sure the livox_lidar_sdk_shared library is available
+  set(LIVOX_SDK_LIBRARY_PATHS /usr/local/lib)
+  if(DEFINED ENV{LD_LIBRARY_PATH})
+    string(REPLACE ":" ";" LIVOX_SDK_ENV_LIBRARY_PATHS "$ENV{LD_LIBRARY_PATH}")
+    list(APPEND LIVOX_SDK_LIBRARY_PATHS ${LIVOX_SDK_ENV_LIBRARY_PATHS})
+  endif()
 
-  ##
+  set(LIVOX_SDK_INCLUDE_PATHS /usr/local/include)
+  foreach(LIVOX_SDK_LIBRARY_PATH IN LISTS LIVOX_SDK_LIBRARY_PATHS)
+    get_filename_component(LIVOX_SDK_PREFIX "${LIVOX_SDK_LIBRARY_PATH}" DIRECTORY)
+    list(APPEND LIVOX_SDK_INCLUDE_PATHS "${LIVOX_SDK_PREFIX}/include")
+  endforeach()
+
+  find_library(LIVOX_LIDAR_SDK_LIBRARY
+    NAMES livox_lidar_sdk_shared liblivox_lidar_sdk_shared.so
+    PATHS ${LIVOX_SDK_LIBRARY_PATHS}
+    REQUIRED)
+
   find_path(LIVOX_LIDAR_SDK_INCLUDE_DIR
     NAMES "livox_lidar_api.h" "livox_lidar_def.h"
+    PATHS ${LIVOX_SDK_INCLUDE_PATHS}
     REQUIRED)
 
   ## PCL library
@@ -290,6 +309,9 @@ else(ROS_EDITION STREQUAL "ROS2")
     set(LIVOX_INTERFACE_TARGET "${LIVOX_INTERFACES}__rosidl_typesupport_cpp")
     add_dependencies(${PROJECT_NAME} ${LIVOX_INTERFACES})
     get_target_property(LIVOX_INTERFACES_INCLUDE_DIRECTORIES ${LIVOX_INTERFACE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+    if(NOT LIVOX_INTERFACES_INCLUDE_DIRECTORIES)
+      unset(LIVOX_INTERFACES_INCLUDE_DIRECTORIES)
+    endif()
   endif()
 
   # include file direcotry

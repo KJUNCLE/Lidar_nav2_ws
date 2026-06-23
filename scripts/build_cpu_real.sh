@@ -19,6 +19,17 @@ CPU_REAL_PACKAGES=(
 
 colcon build \
   --symlink-install \
+  --packages-select livox_sdk2 \
+  --cmake-args -DCMAKE_BUILD_TYPE=Release \
+  --parallel-workers 2 \
+  "$@"
+
+set +u
+source install/setup.bash
+set -u
+
+colcon build \
+  --symlink-install \
   --packages-select livox_ros_driver2 \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
   --parallel-workers 2 \
