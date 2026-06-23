@@ -110,6 +110,7 @@ private:
   int gicp_fail_count_ = 0;
   int gicp_max_consecutive_failures_;
   int recovery_min_points_;
+  int max_accumulated_points_;
   double recovery_cooldown_sec_;
   rclcpp::Time last_recovery_attempt_time_;
 };

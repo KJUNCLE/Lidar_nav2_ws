@@ -426,7 +426,7 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 
 ### 4.2 FAST-LIO 覆盖参数
 
-launch 会在 `mid360.yaml` 基础上覆盖：
+建图和导航 launch 会在 `mid360.yaml` 基础上覆盖：
 
 | 参数 | 来源 | 用处 |
 | --- | --- | --- |
@@ -437,11 +437,11 @@ launch 会在 `mid360.yaml` 基础上覆盖：
 | `preprocess.blind` | `vehicle.fast_lio.blind` | 近距离盲区 |
 | `preprocess.timestamp_unit` | `vehicle.fast_lio.timestamp_unit` | Livox 时间戳单位 |
 | `mapping.extrinsic_T/R` | `vehicle.fast_lio.extrinsic_T/R` | FAST-LIO IMU-LiDAR 外参 |
-| `pcd_save.pcd_save_en` | `true` | 允许保存 PCD |
+| `pcd_save.pcd_save_en` | 建图标准后端为 `true`；导航和 humanoid 后端为 `false` | 建图允许保存 PCD；导航避免在线链路累积保存点云 |
 | `pcd_save.interval` | `-1` | 全部帧保存到一个 PCD |
 | `map_file_path` | `prior_pcd_file` | PCD 输出路径 |
 
-humanoid 模式下，launch 会把 `pcd_save.pcd_save_en` 关掉，避免和 `open3d_loc_humanoid` 的在线定位链路混用保存逻辑。
+导航模式不保存 FAST-LIO PCD。需要生成或更新 3D 先验地图时，使用 `cpu_real_mapping.launch.py`，并通过 `save_pcd.sh` 调用 `/map_save` 服务。
 
 ### 4.3 点云切片
 
@@ -482,6 +482,7 @@ humanoid 模式下，launch 会把 `pcd_save.pcd_save_en` 关掉，避免和 `op
 | `use_kiss_recovery` | `true` | 跟踪失败后允许 KISS 恢复 |
 | `gicp_max_consecutive_failures` | `2` | 连续失败后进入恢复 |
 | `recovery_min_points` | `1000` | 恢复所需最小点数 |
+| `max_accumulated_points` | `50000` | 重定位累计点云上限，超过后只保留最新一帧 |
 | `recovery_cooldown_sec` | `2.0` | 恢复冷却时间 |
 | `verify_kiss_with_gicp` | `true` | 用 GICP 验证 KISS 结果 |
 | `loop.num_inliers_threshold` | `3` | KISS 内点阈值 |
@@ -491,6 +492,7 @@ humanoid 模式下，launch 会把 `pcd_save.pcd_save_en` 关掉，避免和 `op
 
 - `small_gicp` 适合已知或近似开机位姿。
 - `kiss` 适合未知起点或丢定位恢复。
+- `kiss` 初始化、跟踪或恢复失败后会丢弃本次累计点云窗口，下一轮使用新窗口重试，避免重定位失败时点云无界累积。
 - 两者不能同时运行，否则会有两个 `map -> odom` 发布源。
 
 ### 4.5 Humanoid 可选后端
@@ -614,5 +616,6 @@ ros2 run tf2_ros tf2_echo map odom
 - `map -> odom` 只有一个发布源。
 - RViz 中 `/map`、`/scan`、局部/全局 costmap 正常。
 - 如果重定位失败，优先检查 `map_name`、`prior_pcd_file`、外参、初始位姿和 `/registered_scan` 点数。
+- 如果容器退出或 SSH 断开，重连后先检查 `docker inspect nav2 --format '{{.State.OOMKilled}} {{.State.ExitCode}}'` 和 `dmesg -T | grep -Ei 'out of memory|oom|killed process'`，确认是否发生 OOM。
 
 实车启动和验收必须在实际 MID360、底盘、电源、急停和人工接管正常的环境中完成。

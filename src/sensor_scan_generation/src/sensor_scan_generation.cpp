@@ -62,7 +62,7 @@ void SensorScanGeneration::laserCloudAndOdometryHandler(
     const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pcd_msg)
 {
-    RCLCPP_INFO(this->get_logger(), BLU "Received synchronized odometry and point cloud messages" RST);
+    RCLCPP_DEBUG(this->get_logger(), BLU "Received synchronized odometry and point cloud messages" RST);
     tf2::Transform tf_lidar_to_chassis;
     tf2::Transform tf_odom_to_chassis;
     tf2::Transform tf_odom_to_base_footprint_;

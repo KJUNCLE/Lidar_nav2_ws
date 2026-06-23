@@ -115,6 +115,8 @@ void GlobalKissMatcherRelocalizationNode::declareParameters()
     this->declare_parameter<int>("gicp_max_consecutive_failures", 3);
   recovery_min_points_ = 
     this->declare_parameter<int>("recovery_min_points", 1000);
+  max_accumulated_points_ =
+    this->declare_parameter<int>("max_accumulated_points", 50000);
   recovery_cooldown_sec_ = 
     this->declare_parameter<double>("recovery_cooldown_sec", 2.0);
 }
@@ -181,6 +183,16 @@ void GlobalKissMatcherRelocalizationNode::registeredPcdCallback(
   pcl::fromROSMsg(*msg, *scan);
 
   *accumulated_cloud_ += *scan;
+  if (
+    max_accumulated_points_ > 0 &&
+    accumulated_cloud_->size() > static_cast<size_t>(max_accumulated_points_))
+  {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "Accumulated relocalization cloud exceeded %d points. Keeping latest scan only.",
+      max_accumulated_points_);
+    *accumulated_cloud_ = *scan;
+  }
 }
 
 void GlobalKissMatcherRelocalizationNode::performRegistration()
@@ -211,9 +223,12 @@ void GlobalKissMatcherRelocalizationNode::performRegistration()
         RCLCPP_INFO(
           this->get_logger(), "KISSMatcher initialization succeeded. Inliers: %zu", inliers);
       } else {
+        const auto attempted_points = accumulated_cloud_->size();
+        accumulated_cloud_->clear();
         RCLCPP_WARN(
           this->get_logger(),
-          "KISSMatcher initialization failed. Inliers: %zu. Retrying next cycle...", inliers);
+          "KISSMatcher initialization failed. Inliers: %zu. Dropped %zu points before retrying.",
+          inliers, attempted_points);
       }
       return;
     }
@@ -238,9 +253,8 @@ void GlobalKissMatcherRelocalizationNode::performRegistration()
         reloc_state_ = RelocState::GLOBAL_RECOVERY;
         last_recovery_attempt_time_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
         RCLCPP_WARN(this->get_logger(), "GICP lost. Switching to KISSMatcher recovery.");
-      } else if (!use_kiss_recovery_) {
-        accumulated_cloud_->clear();
       }
+      accumulated_cloud_->clear();
       return;
     }
 
@@ -264,18 +278,21 @@ void GlobalKissMatcherRelocalizationNode::performRegistration()
       Eigen::Isometry3d kiss_pose = Eigen::Isometry3d::Identity();
       size_t inliers = 0;
       if (!tryKissAlignment(accumulated_cloud_, kiss_pose, inliers)) {
+        accumulated_cloud_->clear();
         RCLCPP_WARN(
           this->get_logger(),
-          "KISSMatcher recovery failed. Inliers: %zu. Continue accumulating...", inliers);
+          "KISSMatcher recovery failed. Inliers: %zu. Retrying with a fresh cloud window.",
+          inliers);
         return;
       }
 
       Eigen::Isometry3d recovered_pose = kiss_pose;
       if (verify_kiss_with_gicp_) {
         if (!tryGicpAlignment(accumulated_cloud_, kiss_pose, recovered_pose)) {
+          accumulated_cloud_->clear();
           RCLCPP_WARN(
             this->get_logger(),
-            "KISSMatcher recovery produced a pose, but GICP verification failed. Continue recovery.");
+            "KISSMatcher recovery produced a pose, but GICP verification failed. Retrying with a fresh cloud window.");
           return;
         }
       }
