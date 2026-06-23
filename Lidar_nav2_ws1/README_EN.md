@@ -19,6 +19,8 @@ Target TF tree:
 map -> odom -> base_footprint -> chassis -> livox_frame
 ```
 
+Default fixed TF offsets live in `src/me_nav2_bringup/config/vehicle.yaml`: `base_to_chassis.xyz` is `[0.0, 0.0, 0.12]`, and `chassis_to_lidar.xyz` is `[0.35, 0.0, 0.18]`.
+
 ## Quick Start
 
 ```bash
@@ -63,6 +65,8 @@ Navigation:
 ```bash
 ./nav2_real.sh map_name:=site_a relocalizer:=small_gicp
 ```
+
+`nav2_real.sh` guards `source install/setup.bash` against unset-variable failures and `cpu_real_nav.launch.py` starts the map server before the delayed sensor/Nav2/relocalization chain.
 
 Unknown startup pose:
 

@@ -96,7 +96,7 @@ tsl-robin-map
 
 ## 关键配置
 
-- `src/me_nav2_bringup/config/vehicle.yaml`：frame 名称、footprint、MID360 外参、FAST-LIO 参数、点云切片高度。
+- `src/me_nav2_bringup/config/vehicle.yaml`：frame 名称、footprint、MID360 外参、FAST-LIO 参数、点云切片高度；默认 `base_to_chassis.xyz` 为 `[0.0, 0.0, 0.12]`，`chassis_to_lidar.xyz` 为 `[0.35, 0.0, 0.18]`。
 - `src/livox_ros_driver2-master/config/MID360s_config.json`：MID360s IP 和主机网卡配置。
 - `src/me_nav2_bringup/config/nav2_params.yaml`：Nav2 控制器、规划器、代价地图参数。
 - `src/me_nav2_bringup/config/slam_toolbox_params.yaml`：2D SLAM 参数。

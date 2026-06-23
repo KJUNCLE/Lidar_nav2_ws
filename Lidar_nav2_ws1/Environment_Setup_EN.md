@@ -150,6 +150,8 @@ Navigation:
 ./nav2_real.sh map_name:=site_a relocalizer:=small_gicp
 ```
 
+`nav2_real.sh` guards `source install/setup.bash` against unset-variable failures. The navigation launch starts and activates `map_server` first, then delays the Livox, FAST-LIO, Nav2, and relocalization chain.
+
 Unknown startup pose:
 
 ```bash

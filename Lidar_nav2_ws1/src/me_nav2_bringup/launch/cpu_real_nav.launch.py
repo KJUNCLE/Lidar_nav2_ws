@@ -3,7 +3,7 @@ import sys
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -85,7 +85,7 @@ def _launch_setup(context, *args, **kwargs):
         executable="map_server",
         name="map_server",
         output="screen",
-        parameters=[configured_nav2_params, {"yaml_filename": map_yaml_file, "use_sim_time": False}],
+        parameters=[{"yaml_filename": map_yaml_file, "use_sim_time": False}],
     )
 
     lifecycle_manager_map_cmd = Node(
@@ -252,17 +252,22 @@ def _launch_setup(context, *args, **kwargs):
     )
 
     return [
-        livox_node,
-        robot_state_publisher,
-        fast_lio_node,
-        lio_interface_node,
-        sensor_scan_generation_node,
-        pointcloud_to_laserscan_node,
         map_server_cmd,
-        lifecycle_manager_map_cmd,
-        navigation_cmd,
-        relocalizer_node,
-        rviz_node,
+        TimerAction(period=0.5, actions=[lifecycle_manager_map_cmd]),
+        TimerAction(
+            period=3.0,
+            actions=[
+                livox_node,
+                robot_state_publisher,
+                fast_lio_node,
+                lio_interface_node,
+                sensor_scan_generation_node,
+                pointcloud_to_laserscan_node,
+                navigation_cmd,
+                relocalizer_node,
+                rviz_node,
+            ],
+        ),
     ]
 
 

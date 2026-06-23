@@ -97,8 +97,8 @@ src/me_nav2_bringup/config/vehicle.yaml
 | `lidar_topic` | `/livox/lidar` | FAST-LIO 点云输入 | 驱动输出话题变更时修改 |
 | `imu_topic` | `/livox/imu` | FAST-LIO IMU 输入 | 驱动输出话题变更时修改 |
 | `footprint` | 0.42 m x 0.39 m 矩形 | Nav2 代价地图碰撞轮廓 | 车体尺寸变化时必须修改 |
-| `base_to_chassis.xyz/rpy` | 全 0 | `base_footprint -> chassis` 固定 TF | 实测坐标偏置后修改 |
-| `chassis_to_lidar.xyz/rpy` | 全 0 | `chassis -> livox_frame` 固定 TF | MID360 安装位置/姿态变化时必须修改 |
+| `base_to_chassis.xyz/rpy` | `xyz: [0.0, 0.0, 0.12]`, `rpy: [0.0, 0.0, 0.0]` | `base_footprint -> chassis` 固定 TF | 实测坐标偏置后修改 |
+| `chassis_to_lidar.xyz/rpy` | `xyz: [0.35, 0.0, 0.18]`, `rpy: [0.0, 0.0, 0.0]` | `chassis -> livox_frame` 固定 TF | MID360 安装位置/姿态变化时必须修改 |
 | `fast_lio.lidar_type` | `1` | Livox CustomMsg 输入 | MID360 CPU 实车默认不改 |
 | `fast_lio.scan_line` | `4` | MID360 扫描线数配置 | 一般不改 |
 | `fast_lio.blind` | `0.5` | 近距离盲区过滤 | 近距离噪声或车体点过多时调整 |
@@ -302,6 +302,8 @@ source install/setup.bash
 ros2 launch me_nav2_bringup cpu_real_nav.launch.py ...
 ```
 
+脚本内部在 `source install/setup.bash` 前临时关闭 `set -u`，加载完成后再恢复，避免 ROS 2/colcon 生成的 setup 脚本因未绑定变量让导航启动脚本提前退出。
+
 启动内容是在建图链路基础上增加：
 
 | 节点/组件 | 作用 |
@@ -311,6 +313,8 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py ...
 | `nav2_bringup/navigation_launch.py` | 启动 Nav2 planner/controller/BT navigator/behavior/velocity smoother |
 | `small_gicp_relocalization_node` | 默认 3D 连续重定位，发布 `map -> odom` |
 | `global_kiss_matcher_relocalization_exec` | KISS 全局初始化 + GICP 连续跟踪，发布 `map -> odom` |
+
+当前导航 launch 的启动顺序是：先启动 `map_server`；0.5 秒后启动 `lifecycle_manager_map` 激活地图；3 秒后再启动 Livox、车体 TF、FAST-LIO、点云切片、Nav2、重定位和 RViz。这样可以降低 map server 与导航链路同时初始化时的时序抖动。
 
 导航时检查：
 
@@ -373,7 +377,7 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 | `map_yaml_file` | `me_nav2_bringup/map/<map_name>.yaml` | Nav2 2D 地图路径 | 地图不按 `map_name` 存放时 | `map_yaml_file:=/abs/site_a.yaml` |
 | `prior_pcd_file` | `me_nav2_bringup/pcd/<map_name>.pcd` | 3D 重定位先验 PCD | PCD 不按 `map_name` 存放时 | `prior_pcd_file:=/abs/site_a.pcd` |
 
-`cpu_real_nav.launch.py` 会把 `vehicle.yaml` 中的 `footprint` 和 frame 名称重写到 Nav2 参数中，避免 `nav2_params.yaml` 和车体配置不一致。
+`cpu_real_nav.launch.py` 会把 `vehicle.yaml` 中的 `footprint` 和 frame 名称重写到 Nav2 参数中，避免 `nav2_params.yaml` 和车体配置不一致。`map_server` 只接收 `yaml_filename` 和 `use_sim_time`，Nav2 的完整参数文件通过 `navigation_launch.py` 传入。
 
 ## 4. 固定节点参数说明
 

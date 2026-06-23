@@ -13,10 +13,10 @@ vehicle:
     - [-0.21, -0.195]
     - [-0.21, 0.195]
   base_to_chassis:
-    xyz: [0.0, 0.0, 0.0]
+    xyz: [0.0, 0.0, 0.12]
     rpy: [0.0, 0.0, 0.0]
   chassis_to_lidar:
-    xyz: [0.0, 0.0, 0.0]
+    xyz: [0.35, 0.0, 0.18]
     rpy: [0.0, 0.0, 0.0]
   fast_lio:
     lidar_type: 1

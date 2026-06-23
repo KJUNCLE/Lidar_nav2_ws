@@ -15,8 +15,8 @@ def load_vehicle_config(path: str) -> Dict[str, Any]:
         "lidar_topic": "/livox/lidar",
         "imu_topic": "/livox/imu",
         "footprint": [[0.21, 0.195], [0.21, -0.195], [-0.21, -0.195], [-0.21, 0.195]],
-        "base_to_chassis": {"xyz": [0.0, 0.0, 0.0], "rpy": [0.0, 0.0, 0.0]},
-        "chassis_to_lidar": {"xyz": [0.0, 0.0, 0.0], "rpy": [0.0, 0.0, 0.0]},
+        "base_to_chassis": {"xyz": [0.0, 0.0, 0.12], "rpy": [0.0, 0.0, 0.0]},
+        "chassis_to_lidar": {"xyz": [0.35, 0.0, 0.18], "rpy": [0.0, 0.0, 0.0]},
         "fast_lio": {
             "lidar_type": 1,
             "scan_line": 4,
