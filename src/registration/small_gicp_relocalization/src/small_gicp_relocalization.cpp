@@ -160,15 +160,27 @@ void SmallGicpRelocalizationNode::registeredPcdCallback(
 void SmallGicpRelocalizationNode::performRegistration()
 {
   if (accumulated_cloud_->empty()) {
-    RCLCPP_WARN(this->get_logger(), "No accumulated points to process.");
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "No accumulated points to process. Waiting for %s.", input_cloud_topic_.c_str());
     return;
   }
+
+  const auto accumulated_points = accumulated_cloud_->size();
 
   // 实时点云降采样，转为 0.25*0.25*0.25 体素盒子，
   // 然后每个体素盒子对应一个协方差矩阵(用于还原体素盒子内部点云原本的样子)
   source_ = small_gicp::voxelgrid_sampling_omp<
     pcl::PointCloud<pcl::PointXYZ>, pcl::PointCloud<pcl::PointCovariance>>(
     *accumulated_cloud_, registered_leaf_size_);
+
+  if (source_->empty()) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "No usable points after downsampling. raw_points=%zu", accumulated_points);
+    accumulated_cloud_->clear();
+    return;
+  }
 
   // 计算每个点附近 num_neighbors_ 个点的协方差矩阵
   // Estimate covariances of points
@@ -193,7 +205,10 @@ void SmallGicpRelocalizationNode::performRegistration()
   if (result.converged) {
     result_t_ = previous_result_t_ = result.T_target_source;
   } else {
-    RCLCPP_WARN(this->get_logger(), "GICP did not converge.");
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 2000,
+      "GICP did not converge. raw_points=%zu, downsampled_points=%zu",
+      accumulated_points, source_->size());
   }
 
   accumulated_cloud_->clear();

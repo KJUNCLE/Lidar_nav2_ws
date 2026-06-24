@@ -196,6 +196,15 @@ source ../install/setup.bash
 ./mapping_real.sh map_name:=site_a use_rviz:=true
 ```
 
+如果现场需要指定 MID360 配置文件，显式传入 `livox_config_file`：
+
+```bash
+./mapping_real.sh \
+  map_name:=site_a \
+  use_rviz:=true \
+  livox_config_file:=/abs/path/to/MID360_config.json
+```
+
 这个脚本等价于：
 
 ```bash
@@ -492,6 +501,8 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 
 - `small_gicp` 适合已知或近似开机位姿。
 - `kiss` 适合未知起点或丢定位恢复。
+- `small_gicp` 的 `GICP did not converge` 日志会输出原始点数和降采样后点数；点数正常但持续不收敛时，优先检查初始位姿、地图/PCD 是否匹配和外参。
+- `small_gicp` 的 `No accumulated points to process` 表示当前定时器周期还没收到新的 `/registered_scan`，节点会节流输出该日志。
 - `kiss` 初始化、跟踪或恢复失败后会丢弃本次累计点云窗口，下一轮使用新窗口重试，避免重定位失败时点云无界累积。
 - 两者不能同时运行，否则会有两个 `map -> odom` 发布源。
 
