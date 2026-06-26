@@ -105,7 +105,7 @@ fast_lio_humanoid
 open3d_loc_humanoid
 ```
 
-第三方 KISS-Matcher C++ 源码保留在 `third_party/KISS-Matcher`，通过 `third_party/COLCON_IGNORE` 退出 colcon 包扫描，仅作为 `global_relocalization_kiss_matcher` 的 CMake 依赖使用。
+第三方 KISS-Matcher C++ 源码保留在 `third_party/KISS-Matcher`，`robin-map` 保留在 `third_party/robin-map`，通过 `third_party/COLCON_IGNORE` 退出 colcon 包扫描，仅作为 `global_relocalization_kiss_matcher` 的 CMake 依赖使用。需要由 colcon 构建的第三方包 `small_gicp` 放在 `src/99_vendor/small_gicp`。
 
 ## 关键配置
 

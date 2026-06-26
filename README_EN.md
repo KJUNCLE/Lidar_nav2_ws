@@ -105,7 +105,7 @@ fast_lio_humanoid
 open3d_loc_humanoid
 ```
 
-KISS-Matcher C++ sources are kept under `third_party/KISS-Matcher`. `third_party/COLCON_IGNORE` prevents colcon from treating third-party demo code as workspace packages.
+KISS-Matcher C++ sources are kept under `third_party/KISS-Matcher`, and `robin-map` is kept under `third_party/robin-map`. `third_party/COLCON_IGNORE` prevents colcon from treating third-party demo code as workspace packages. The colcon-built third-party package `small_gicp` lives under `src/99_vendor/small_gicp`.
 
 ## Key Docs
 

@@ -1,0 +1,27 @@
+std_msgs/Header header
+uint32 can_id
+
+uint8 ccu_shift_level_status
+uint8 ccu_parking_status
+uint8 ccu_ignition_status
+uint8 ccu_drive_mode_shift_button
+
+uint8 steering_wheel_direction
+uint16 ccu_steering_wheel_angle_raw
+float32 ccu_steering_wheel_angle_deg
+
+uint16 ccu_vehicle_speed_raw
+float32 ccu_vehicle_speed_kmh
+uint8 ccu_drive_mode
+
+uint8 remote_brake_request_status
+uint8 emergency_brake_request_status
+uint8 scu_brake_signal_status
+uint8 touch_brake_request_status
+uint8 handle_brake_request_status
+uint8 handle_mode_flag_status
+
+uint8 left_turn_light_status
+uint8 right_turn_light_status
+uint8 position_light_status
+uint8 low_beam_status

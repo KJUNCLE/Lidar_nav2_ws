@@ -31,10 +31,12 @@ git switch deploy/cpu-mid360-nav2
 git submodule update --init --recursive
 ```
 
-Kept submodules:
+Kept root-level third-party dependencies:
 
-- `lib/robin-map`: KISS-Matcher dependency.
+- `third_party/robin-map`: KISS-Matcher dependency.
 - `third_party/KISS-Matcher`: C++ dependency only, excluded from colcon package discovery.
+
+The colcon-built third-party package `small_gicp` lives under `src/99_vendor/small_gicp`.
 
 ## 3. Install Dependencies
 

@@ -1,0 +1,14 @@
+std_msgs/Header header
+uint32 can_id
+
+int16 hardware_target_speed_raw
+float32 hardware_target_speed_kmh
+
+int16 scu_target_speed_feedback_raw
+float32 scu_target_speed_feedback_kmh
+
+int16 vehicle_target_speed_raw
+float32 vehicle_target_speed_kmh
+
+int16 vehicle_target_speed_rpm_raw
+float32 vehicle_target_speed_rpm
