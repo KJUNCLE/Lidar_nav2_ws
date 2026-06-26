@@ -686,9 +686,12 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
         omp_set_num_threads(MP_PROC_NUM);
         #pragma omp parallel for
     #endif
+    // 遍历当前帧降采样后的雷达点云
     for (int i = 0; i < feats_down_size; i++)
     {
-        PointType &point_body  = feats_down_body->points[i]; 
+        // 雷达坐标系/body坐标系下的点
+        PointType &point_body  = feats_down_body->points[i];
+        // world坐标系下的点 
         PointType &point_world = feats_down_world->points[i]; 
 
         /* transform to world frame */
@@ -701,6 +704,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
 
         vector<float> pointSearchSqDis(NUM_MATCH_POINTS);
 
+        /* find the closest surfaces */
         auto &points_near = Nearest_Points[i];
 
         if (ekfom_data.converge)

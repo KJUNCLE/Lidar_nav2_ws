@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname -- "$SCRIPT_DIR")"
 
-IMAGE="${IMAGE:-nav2/lidar:v1}"
+IMAGE="${IMAGE:-nav2:latest}"
 CONTAINER_NAME="${CONTAINER_NAME:-nav2}"
 HOST_WORKSPACE="${HOST_WORKSPACE:-$WORKSPACE_ROOT}"
 CONTAINER_WORKSPACE="${CONTAINER_WORKSPACE:-/workspace/$(basename "$HOST_WORKSPACE")}"
