@@ -137,6 +137,7 @@ ros2 launch me_nav2_bringup cpu_real_mapping.launch.py --show-args
 ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 ros2 run tf2_ros tf2_echo map odom
 ros2 topic hz /registered_scan
+ros2 topic echo /cmd_vel_nav
 ros2 topic echo /cmd_vel
 ```
 

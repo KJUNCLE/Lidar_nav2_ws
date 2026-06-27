@@ -66,6 +66,7 @@ private:
   std::string current_scan_frame_id_;
   std::string input_cloud_topic_;
   rclcpp::Time last_scan_time_;
+  double tf_future_tolerance_;
   Eigen::Isometry3d result_t_;
   Eigen::Isometry3d previous_result_t_;
 

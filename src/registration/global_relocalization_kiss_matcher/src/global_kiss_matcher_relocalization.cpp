@@ -100,6 +100,7 @@ void GlobalKissMatcherRelocalizationNode::declareParameters()
   lidar_frame_ = this->declare_parameter<std::string>("lidar_frame", "");
   prior_pcd_file_ = this->declare_parameter<std::string>("prior_pcd_file", "");
   input_cloud_topic_ = this->declare_parameter<std::string>("input_cloud_topic", "registered_scan");
+  tf_future_tolerance_ = this->declare_parameter<double>("tf_future_tolerance", 0.2);
 
   init_pose_ = this->declare_parameter<std::vector<double>>(
     "init_pose", std::vector<double>{0., 0., 0., 0., 0., 0.});
@@ -391,7 +392,8 @@ void GlobalKissMatcherRelocalizationNode::publishTransform()
   }
 
   geometry_msgs::msg::TransformStamped transform_stamped;
-  transform_stamped.header.stamp = last_scan_time_ + rclcpp::Duration::from_seconds(0.1);
+  transform_stamped.header.stamp =
+    this->now() + rclcpp::Duration::from_seconds(tf_future_tolerance_);
   transform_stamped.header.frame_id = map_frame_;
   transform_stamped.child_frame_id = odom_frame_;
 

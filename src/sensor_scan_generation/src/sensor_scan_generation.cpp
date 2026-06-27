@@ -9,6 +9,8 @@ SensorScanGeneration::SensorScanGeneration(const rclcpp::NodeOptions & options)
     lidar_frame_ = this->declare_parameter<std::string>("lidar_frame", "livox_frame");
     base_footprint_frame_ = this->declare_parameter<std::string>("base_footprint_frame", "base_footprint");
     chassis_frame_ = this->declare_parameter<std::string>("chassis_frame", "chassis");
+    use_wall_time_for_nav_ = this->declare_parameter<bool>("use_wall_time_for_nav", false);
+    tf_future_tolerance_ = this->declare_parameter<double>("tf_future_tolerance", 0.0);
 
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -75,10 +77,15 @@ void SensorScanGeneration::laserCloudAndOdometryHandler(
     tf_odom_to_chassis = tf_odom_to_lidar * tf_lidar_to_chassis;
     tf_odom_to_base_footprint_ = tf_odom_to_lidar * tf_lidar_to_base_footprint_;
 
+    const rclcpp::Time output_stamp =
+        use_wall_time_for_nav_ ? this->now() : rclcpp::Time(pcd_msg->header.stamp);
+    const rclcpp::Time tf_stamp =
+        output_stamp + rclcpp::Duration::from_seconds(tf_future_tolerance_);
+
     publishTransform(
-    tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, pcd_msg->header.stamp);
+    tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, tf_stamp);
     publishOdometry(
-    tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, pcd_msg->header.stamp);
+    tf_odom_to_base_footprint_, odometry_msg->header.frame_id, base_footprint_frame_, output_stamp);
 
     sensor_msgs::msg::PointCloud2 out;
     pcl_ros::transformPointCloud(lidar_frame_, tf_odom_to_lidar.inverse(), *pcd_msg, out);

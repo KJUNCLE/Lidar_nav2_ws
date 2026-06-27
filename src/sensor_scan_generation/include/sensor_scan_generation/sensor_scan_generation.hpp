@@ -35,6 +35,8 @@ private:
     std::string lidar_frame_;
     std::string base_footprint_frame_;
     std::string chassis_frame_;
+    bool use_wall_time_for_nav_;
+    double tf_future_tolerance_;
     tf2::Transform tf_lidar_to_base_footprint_;
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> br_;

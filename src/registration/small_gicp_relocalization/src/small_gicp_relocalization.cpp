@@ -41,6 +41,7 @@ SmallGicpRelocalizationNode::SmallGicpRelocalizationNode(const rclcpp::NodeOptio
   this->declare_parameter("prior_pcd_file", "");
   this->declare_parameter("init_pose", std::vector<double>{0., 0., 0., 0., 0., 0.});
   this->declare_parameter("input_cloud_topic", "registered_scan");
+  this->declare_parameter("tf_future_tolerance", 0.2);
 
   this->get_parameter("num_threads", num_threads_);
   this->get_parameter("num_neighbors", num_neighbors_);
@@ -55,6 +56,7 @@ SmallGicpRelocalizationNode::SmallGicpRelocalizationNode(const rclcpp::NodeOptio
   this->get_parameter("prior_pcd_file", prior_pcd_file_);
   this->get_parameter("init_pose", init_pose_);
   this->get_parameter("input_cloud_topic", input_cloud_topic_);
+  this->get_parameter("tf_future_tolerance", tf_future_tolerance_);
 
   // 初始化位姿
   // [x, y, z, roll, pitch, yaw] - init_pose parameters
@@ -221,8 +223,8 @@ void SmallGicpRelocalizationNode::publishTransform()
   }
 
   geometry_msgs::msg::TransformStamped transform_stamped;
-  // `+ 0.1` means transform into future. according to https://robotics.stackexchange.com/a/96615
-  transform_stamped.header.stamp = last_scan_time_ + rclcpp::Duration::from_seconds(0.1);
+  transform_stamped.header.stamp =
+    this->now() + rclcpp::Duration::from_seconds(tf_future_tolerance_);
   transform_stamped.header.frame_id = map_frame_;
   transform_stamped.child_frame_id = odom_frame_;
 

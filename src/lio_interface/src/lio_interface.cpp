@@ -10,10 +10,12 @@ LioInterface::LioInterface(const rclcpp::NodeOptions & options)
     this->declare_parameter("cloud_sub", "/cloud_registered");
     this->declare_parameter("base_frame", "base_footprint");
     this->declare_parameter("lidar_frame", "livox_frame");
+    this->declare_parameter("use_wall_time_for_nav", false);
     this->get_parameter("odometry_sub", odometry_sub_);
     this->get_parameter("cloud_sub", cloud_sub_);
     this->get_parameter("base_frame", base_frame_);
     this->get_parameter("lidar_frame", lidar_frame_);
+    this->get_parameter("use_wall_time_for_nav", use_wall_time_for_nav_);
 
     base_frame_to_lidar_initialized_ = false;
 
@@ -53,6 +55,10 @@ void LioInterface::pointCloudCallback(const sensor_msgs::msg::PointCloud2::Const
 
     auto out = std::make_shared<sensor_msgs::msg::PointCloud2>();
     pcl_ros::transformPointCloud("odom", tf_odom_to_lidar_odom_, *msg, *out);
+    out->header.frame_id = "odom";
+    if (use_wall_time_for_nav_) {
+        out->header.stamp = this->now();
+    }
     pcd_pub_->publish(*out);
 
 }
@@ -98,7 +104,7 @@ void LioInterface::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPt
     tf_odom_to_lidar = tf_odom_to_lidar_odom_ * tf_lidar_odom_to_lidar_frame;
 
     nav_msgs::msg::Odometry out;
-    out.header.stamp = msg->header.stamp;
+    out.header.stamp = use_wall_time_for_nav_ ? this->now() : rclcpp::Time(msg->header.stamp);
     out.header.frame_id = "odom";
     out.child_frame_id = lidar_frame_;
 

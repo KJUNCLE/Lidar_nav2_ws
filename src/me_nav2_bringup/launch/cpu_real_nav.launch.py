@@ -3,9 +3,8 @@ import sys
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
@@ -34,9 +33,95 @@ def _make_nav2_params(nav2_params_file, vehicle):
     )
 
 
+def _make_navigation_nodes(configured_nav2_params):
+    tf_remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
+    lifecycle_nodes = [
+        "controller_server",
+        "smoother_server",
+        "planner_server",
+        "behavior_server",
+        "bt_navigator",
+        "waypoint_follower",
+        "velocity_smoother",
+    ]
+
+    return [
+        Node(
+            package="nav2_controller",
+            executable="controller_server",
+            name="controller_server",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings + [("cmd_vel", "cmd_vel_nav")],
+        ),
+        Node(
+            package="nav2_smoother",
+            executable="smoother_server",
+            name="smoother_server",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings,
+        ),
+        Node(
+            package="nav2_planner",
+            executable="planner_server",
+            name="planner_server",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings,
+        ),
+        Node(
+            package="nav2_behaviors",
+            executable="behavior_server",
+            name="behavior_server",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings,
+        ),
+        Node(
+            package="nav2_bt_navigator",
+            executable="bt_navigator",
+            name="bt_navigator",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings,
+        ),
+        Node(
+            package="nav2_waypoint_follower",
+            executable="waypoint_follower",
+            name="waypoint_follower",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings,
+        ),
+        Node(
+            package="nav2_velocity_smoother",
+            executable="velocity_smoother",
+            name="velocity_smoother",
+            output="screen",
+            emulate_tty=True,
+            parameters=[configured_nav2_params],
+            remappings=tf_remappings + [("cmd_vel", "cmd_vel_nav"), ("cmd_vel_smoothed", "cmd_vel")],
+        ),
+        Node(
+            package="nav2_lifecycle_manager",
+            executable="lifecycle_manager",
+            name="lifecycle_manager_navigation",
+            output="screen",
+            emulate_tty=True,
+            parameters=[{"use_sim_time": False}, {"autostart": True}, {"node_names": lifecycle_nodes}],
+        ),
+    ]
+
+
 def _launch_setup(context, *args, **kwargs):
     me_share = get_package_share_directory("me_nav2_bringup")
-    nav2_bringup_share = get_package_share_directory("nav2_bringup")
 
     vehicle_config_file = LaunchConfiguration("vehicle_config_file").perform(context)
     nav2_params_file = LaunchConfiguration("nav2_params_file").perform(context)
@@ -49,6 +134,21 @@ def _launch_setup(context, *args, **kwargs):
     map_yaml_file = LaunchConfiguration("map_yaml_file").perform(context)
     prior_pcd_file = LaunchConfiguration("prior_pcd_file").perform(context)
     livox_config_file = LaunchConfiguration("livox_config_file").perform(context)
+
+    if livox_config_file and not os.path.exists(livox_config_file):
+        fallback_livox_config_file = os.path.join(
+            get_package_share_directory("livox_ros_driver2"),
+            "config",
+            os.path.basename(livox_config_file),
+        )
+        if os.path.exists(fallback_livox_config_file):
+            print(
+                "[cpu_real_nav] livox_config_file not found: "
+                f"{livox_config_file}. Falling back to {fallback_livox_config_file}"
+            )
+            livox_config_file = fallback_livox_config_file
+        else:
+            raise RuntimeError(f"livox_config_file does not exist: {livox_config_file}")
 
     vehicle = load_vehicle_config(vehicle_config_file)
     if localization_backend not in ("standard", "humanoid"):
@@ -152,6 +252,7 @@ def _launch_setup(context, *args, **kwargs):
                 "cloud_sub": "/cloud_registered_1" if use_humanoid_backend else "/cloud_registered",
                 "base_frame": vehicle["base_frame"],
                 "lidar_frame": vehicle["lidar_frame"],
+                "use_wall_time_for_nav": True,
             }
         ],
     )
@@ -167,6 +268,8 @@ def _launch_setup(context, *args, **kwargs):
                 "lidar_frame": vehicle["lidar_frame"],
                 "base_footprint_frame": vehicle["base_frame"],
                 "chassis_frame": vehicle["chassis_frame"],
+                "use_wall_time_for_nav": True,
+                "tf_future_tolerance": 0.5,
             }
         ],
     )
@@ -183,21 +286,13 @@ def _launch_setup(context, *args, **kwargs):
                 "target_frame": vehicle["pointcloud_to_laserscan"]["target_frame"],
                 "min_height": float(vehicle["pointcloud_to_laserscan"]["min_height"]),
                 "max_height": float(vehicle["pointcloud_to_laserscan"]["max_height"]),
+                "transform_tolerance": 0.5,
             },
         ],
         remappings=[("cloud_in", "/registered_scan"), ("scan", "/scan")],
     )
 
-    navigation_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_share, "launch", "navigation_launch.py")
-        ),
-        launch_arguments={
-            "params_file": configured_nav2_params,
-            "use_sim_time": "false",
-            "autostart": "True",
-        }.items(),
-    )
+    navigation_nodes = _make_navigation_nodes(configured_nav2_params)
 
     localization_node = None
     if use_humanoid_backend:
@@ -240,6 +335,7 @@ def _launch_setup(context, *args, **kwargs):
                     "robot_base_frame": vehicle["base_frame"],
                     "prior_pcd_file": prior_pcd_file,
                     "input_cloud_topic": "/registered_scan",
+                    "tf_future_tolerance": 0.5,
                 }
             ],
         )
@@ -263,6 +359,7 @@ def _launch_setup(context, *args, **kwargs):
                     "robot_base_frame": vehicle["base_frame"],
                     "prior_pcd_file": prior_pcd_file,
                     "input_cloud_topic": "/registered_scan",
+                    "tf_future_tolerance": 0.5,
                 }
             ],
         )
@@ -288,7 +385,7 @@ def _launch_setup(context, *args, **kwargs):
                 lio_interface_node,
                 sensor_scan_generation_node,
                 pointcloud_to_laserscan_node,
-                navigation_cmd,
+                *navigation_nodes,
                 localization_node,
                 rviz_node,
             ],

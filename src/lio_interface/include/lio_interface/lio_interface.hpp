@@ -5,6 +5,7 @@
 #include <string>
 
 #include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -32,6 +33,7 @@ private:
     std::string cloud_sub_;
     std::string base_frame_;
     std::string lidar_frame_;
+    bool use_wall_time_for_nav_;
 
     bool base_frame_to_lidar_initialized_;
     
