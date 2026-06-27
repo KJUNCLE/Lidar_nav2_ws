@@ -18,6 +18,7 @@
   <depend>rcutils</depend>
   <depend>pcl_conversions</depend>
   <depend>rcl_interfaces</depend>
+  <depend>livox_sdk2</depend>
   <depend>libpcl-all-dev</depend>
 
   <exec_depend>rosbag2</exec_depend>

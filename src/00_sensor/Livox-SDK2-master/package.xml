@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>livox_sdk2</name>
+  <version>1.3.1</version>
+  <description>Livox SDK2 library used by livox_ros_driver2.</description>
+  <maintainer email="dev@livoxtech.com">Livox</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

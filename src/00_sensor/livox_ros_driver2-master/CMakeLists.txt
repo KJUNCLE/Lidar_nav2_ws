@@ -1,4 +1,8 @@
-# judge which cmake codes to use 
+# judge which cmake codes to use
+if(NOT DEFINED ROS_EDITION OR ROS_EDITION STREQUAL "")
+  set(ROS_EDITION "ROS2" CACHE STRING "Target ROS edition" FORCE)
+endif()
+
 if(ROS_EDITION STREQUAL "ROS1")
 
   # Copyright(c) 2019 livoxtech limited.
@@ -249,28 +253,35 @@ else(ROS_EDITION STREQUAL "ROS2")
     LIBRARY_NAME ${PROJECT_NAME}
   )
 
-  ## make sure the livox_lidar_sdk_shared library is available
-  set(LIVOX_SDK_LIBRARY_PATHS /usr/local/lib)
-  if(DEFINED ENV{LD_LIBRARY_PATH})
-    string(REPLACE ":" ";" LIVOX_SDK_ENV_LIBRARY_PATHS "$ENV{LD_LIBRARY_PATH}")
-    list(APPEND LIVOX_SDK_LIBRARY_PATHS ${LIVOX_SDK_ENV_LIBRARY_PATHS})
+  find_package(livox_sdk2 QUIET)
+
+  if(livox_sdk2_FOUND)
+    set(LIVOX_LIDAR_SDK_LIBRARY livox_sdk2::livox_lidar_sdk_shared)
+    set(LIVOX_LIDAR_SDK_INCLUDE_DIR ${livox_sdk2_INCLUDE_DIRS})
+  else()
+    ## make sure the livox_lidar_sdk_shared library is available
+    set(LIVOX_SDK_LIBRARY_PATHS /usr/local/lib)
+    if(DEFINED ENV{LD_LIBRARY_PATH})
+      string(REPLACE ":" ";" LIVOX_SDK_ENV_LIBRARY_PATHS "$ENV{LD_LIBRARY_PATH}")
+      list(APPEND LIVOX_SDK_LIBRARY_PATHS ${LIVOX_SDK_ENV_LIBRARY_PATHS})
+    endif()
+
+    set(LIVOX_SDK_INCLUDE_PATHS /usr/local/include)
+    foreach(LIVOX_SDK_LIBRARY_PATH IN LISTS LIVOX_SDK_LIBRARY_PATHS)
+      get_filename_component(LIVOX_SDK_PREFIX "${LIVOX_SDK_LIBRARY_PATH}" DIRECTORY)
+      list(APPEND LIVOX_SDK_INCLUDE_PATHS "${LIVOX_SDK_PREFIX}/include")
+    endforeach()
+
+    find_library(LIVOX_LIDAR_SDK_LIBRARY
+      NAMES livox_lidar_sdk_shared liblivox_lidar_sdk_shared.so
+      PATHS ${LIVOX_SDK_LIBRARY_PATHS}
+      REQUIRED)
+
+    find_path(LIVOX_LIDAR_SDK_INCLUDE_DIR
+      NAMES "livox_lidar_api.h" "livox_lidar_def.h"
+      PATHS ${LIVOX_SDK_INCLUDE_PATHS}
+      REQUIRED)
   endif()
-
-  set(LIVOX_SDK_INCLUDE_PATHS /usr/local/include)
-  foreach(LIVOX_SDK_LIBRARY_PATH IN LISTS LIVOX_SDK_LIBRARY_PATHS)
-    get_filename_component(LIVOX_SDK_PREFIX "${LIVOX_SDK_LIBRARY_PATH}" DIRECTORY)
-    list(APPEND LIVOX_SDK_INCLUDE_PATHS "${LIVOX_SDK_PREFIX}/include")
-  endforeach()
-
-  find_library(LIVOX_LIDAR_SDK_LIBRARY
-    NAMES livox_lidar_sdk_shared liblivox_lidar_sdk_shared.so
-    PATHS ${LIVOX_SDK_LIBRARY_PATHS}
-    REQUIRED)
-
-  find_path(LIVOX_LIDAR_SDK_INCLUDE_DIR
-    NAMES "livox_lidar_api.h" "livox_lidar_def.h"
-    PATHS ${LIVOX_SDK_INCLUDE_PATHS}
-    REQUIRED)
 
   ## PCL library
   link_directories(${PCL_LIBRARY_DIRS})
@@ -304,6 +315,7 @@ else(ROS_EDITION STREQUAL "ROS2")
   if(DISTRO_ROS STREQUAL "humble" OR DISTRO_ROS STREQUAL "jazzy")
     rosidl_get_typesupport_target(cpp_typesupport_target
     ${LIVOX_INTERFACES} "rosidl_typesupport_cpp")
+    set(LIVOX_INTERFACE_TARGET "${cpp_typesupport_target}")
     target_link_libraries(${PROJECT_NAME} "${cpp_typesupport_target}")
   else()
     set(LIVOX_INTERFACE_TARGET "${LIVOX_INTERFACES}__rosidl_typesupport_cpp")

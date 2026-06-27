@@ -1,0 +1,6 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/livox_sdk2Targets.cmake")
+
+set(livox_sdk2_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include")
+set(livox_sdk2_LIBRARIES livox_sdk2::livox_lidar_sdk_shared)
