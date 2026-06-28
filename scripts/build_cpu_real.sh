@@ -8,6 +8,10 @@ cd "$WORKSPACE_ROOT"
 ROS_DISTRO_NAME="${ROS_DISTRO:-humble}"
 
 CPU_REAL_PACKAGES=(
+  ros2_socketcan_msgs
+  ros2_socketcan
+  autodrive_d02_can_msgs
+  autodrive_d02_can
   fast_lio
   small_gicp
   lio_interface

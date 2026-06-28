@@ -11,6 +11,7 @@
 
   <depend>autodrive_d02_can_msgs</depend>
   <depend>can_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
 
   <exec_depend>launch</exec_depend>

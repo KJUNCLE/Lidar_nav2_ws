@@ -12,6 +12,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(autodrive_d02_can_msgs REQUIRED)
 find_package(can_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 
 add_library(autodrive_d02_can_encoder
@@ -30,6 +31,17 @@ target_include_directories(autodrive_d02_can_decoder PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
+add_library(autodrive_d02_cmd_vel_converter
+  src/cmd_vel_converter.cpp
+)
+target_include_directories(autodrive_d02_cmd_vel_converter PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(autodrive_d02_cmd_vel_converter PUBLIC
+  autodrive_d02_can_encoder
+)
+
 add_executable(d02_vehicle_control_sender_node
   src/d02_vehicle_control_sender_node.cpp
 )
@@ -39,6 +51,18 @@ target_link_libraries(d02_vehicle_control_sender_node
 ament_target_dependencies(d02_vehicle_control_sender_node
   autodrive_d02_can_msgs
   can_msgs
+  rclcpp
+)
+
+add_executable(d02_cmd_vel_to_vehicle_control_node
+  src/d02_cmd_vel_to_vehicle_control_node.cpp
+)
+target_link_libraries(d02_cmd_vel_to_vehicle_control_node
+  autodrive_d02_cmd_vel_converter
+)
+ament_target_dependencies(d02_cmd_vel_to_vehicle_control_node
+  autodrive_d02_can_msgs
+  geometry_msgs
   rclcpp
 )
 
@@ -76,7 +100,9 @@ install(
   TARGETS
     autodrive_d02_can_decoder
     autodrive_d02_can_encoder
+    autodrive_d02_cmd_vel_converter
     d02_chassis_control_test_node
+    d02_cmd_vel_to_vehicle_control_node
     d02_vehicle_feedback_decoder_node
     d02_vehicle_control_sender_node
   ARCHIVE DESTINATION lib
@@ -95,6 +121,13 @@ if(BUILD_TESTING)
     autodrive_d02_can_encoder
   )
 
+  ament_add_gtest(d02_cmd_vel_converter_test
+    test/d02_cmd_vel_converter_test.cpp
+  )
+  target_link_libraries(d02_cmd_vel_converter_test
+    autodrive_d02_cmd_vel_converter
+  )
+
   ament_add_gtest(d02_target_speed_feedback_decoder_test
     test/d02_target_speed_feedback_decoder_test.cpp
   )
@@ -109,7 +142,8 @@ ament_export_include_directories(include)
 ament_export_libraries(
   autodrive_d02_can_decoder
   autodrive_d02_can_encoder
+  autodrive_d02_cmd_vel_converter
 )
-ament_export_dependencies(autodrive_d02_can_msgs can_msgs rclcpp)
+ament_export_dependencies(autodrive_d02_can_msgs can_msgs geometry_msgs rclcpp)
 
 ament_package()

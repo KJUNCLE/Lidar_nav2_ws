@@ -138,6 +138,10 @@ source /opt/ros/humble/setup.bash
 `build_cpu_real.sh` 只编译实车 CPU 白名单包：
 
 ```text
+ros2_socketcan_msgs
+ros2_socketcan
+autodrive_d02_can_msgs
+autodrive_d02_can
 small_gicp
 livox_ros_driver2
 livox_sdk2
@@ -353,6 +357,70 @@ ros2 topic echo /cmd_vel
 
 同一时间只能有一个重定位节点发布 `map -> odom`。不要同时启动 `small_gicp` 和 `kiss`。
 
+### 2.5 D02 底盘控制
+
+D02 底盘控制独立于 `cpu_real_nav.launch.py` 启动。当前实车控制和反馈都走 `can1`，launch 会启动 `socket_can_receiver`、`socket_can_sender`、反馈解码节点、`cmd_vel` 转换节点和 0x122 控制发送节点。
+
+启动前确认 `can1` 已按底盘实际 bitrate 配好并处于 `UP`：
+
+```bash
+ip -details -statistics link show can1
+```
+
+启动底盘桥：
+
+```bash
+source install/setup.bash
+ros2 launch autodrive_d02_can d02_chassis_bringup.launch.py \
+  cmd_vel_topic:=/cmd_vel
+```
+
+调试时也可以显式指定同一 CAN 口：
+
+```bash
+ros2 launch autodrive_d02_can d02_chassis_bringup.launch.py \
+  feedback_interface:=can1 \
+  control_interface:=can1 \
+  cmd_vel_topic:=/cmd_vel
+```
+
+底盘节点关系：
+
+| 节点 | 作用 |
+| --- | --- |
+| `/socket_can_receiver` | 从 `feedback_interface` 接收 CAN 帧，默认 `can1` |
+| `/d02_vehicle_feedback_decoder` | 解码底盘反馈并发布 `/d02_chassis/*_feedback` |
+| `/d02_cmd_vel_to_vehicle_control` | 订阅 `/cmd_vel`，按差速模型生成 `VehicleControlCommand` |
+| `/d02_vehicle_control_sender` | 将控制命令编码为 0x122 控制帧 |
+| `/socket_can_sender` | 向 `control_interface` 发送 CAN 帧，默认 `can1` |
+
+常用检查：
+
+```bash
+ros2 param get /socket_can_receiver interface
+ros2 param get /socket_can_sender interface
+ros2 topic hz /d02_chassis/from_can_bus
+ros2 topic hz /d02_chassis/to_can_bus
+ros2 topic echo /d02_chassis/vehicle_control_cmd
+```
+
+如果 `socket_can_sender` 报 `No buffer space available`，优先检查 `can1` 状态和队列长度：
+
+```bash
+ip -details -statistics link show can1
+sudo ip link set can1 txqueuelen 1000
+```
+
+必要时降低控制帧发送频率：
+
+```bash
+ros2 launch autodrive_d02_can d02_chassis_bringup.launch.py \
+  cmd_vel_topic:=/cmd_vel \
+  send_period_sec:=0.05 \
+  sender_timeout_sec:=0.05 \
+  filters:=0:0
+```
+
 ## 3. Launch 参数参考
 
 ### 3.1 `cpu_real_mapping.launch.py`
@@ -415,6 +483,29 @@ ros2 launch me_nav2_bringup cpu_real_nav.launch.py --show-args
 - `lio_interface` 改为订阅 `/Odometry_loc` 和 `/cloud_registered_1`
 - `open3d_loc_humanoid` 订阅 `/Odometry_loc`、`/cloud_registered_1`，并加载 `prior_pcd_file`
 - `small_gicp/kiss` 不再启动，避免同时发布 `map -> odom`
+
+### 3.3 `d02_chassis_bringup.launch.py`
+
+查看真实参数：
+
+```bash
+ros2 launch autodrive_d02_can d02_chassis_bringup.launch.py --show-args
+```
+
+关键参数：
+
+| 参数 | 默认值 | 用处 | 何时修改 |
+| --- | --- | --- | --- |
+| `feedback_interface` | `can1` | 底盘反馈 CAN 接口 | 反馈改到另一 CAN 口时 |
+| `control_interface` | `can1` | 底盘控制 CAN 接口 | 控制改到另一 CAN 口时 |
+| `cmd_vel_topic` | `/cmd_vel` | Nav2 输出速度话题 | 接入其他速度源时 |
+| `send_period_sec` | `0.01` | 0x122 控制帧发送周期 | 总线拥塞或调试时可放大到 `0.05` |
+| `command_timeout_sec` | `0.3` | `/cmd_vel` 超时后自动安全制动 | 上层速度源频率变化时 |
+| `track_width_m` | `0.39` | 差速换算等效轮距 | 实车原地旋转角速度偏差时 |
+| `rpm_per_mps` | `72.0` | 线速度到电机 rpm 比例 | 标定轮速比例后 |
+| `max_linear_mps` | `0.26` | 输入线速度限幅 | Nav2 最大线速度调整后同步 |
+| `max_angular_radps` | `1.0` | 输入角速度限幅 | Nav2 最大角速度调整后同步 |
+| `filters` | `7F1:7FF,168:7FF,100:7FF,51:7FF,77:7FF` | 底盘反馈 CAN ID 过滤 | 排查反馈 ID 时可设为 `0:0` |
 
 ## 4. 固定节点参数说明
 
@@ -612,6 +703,16 @@ ros2 lifecycle get /controller_server
 ros2 topic echo /cmd_vel
 ```
 
+底盘验收：
+
+```bash
+ros2 param get /socket_can_receiver interface
+ros2 param get /socket_can_sender interface
+ros2 topic hz /d02_chassis/from_can_bus
+ros2 topic hz /d02_chassis/to_can_bus
+ros2 topic echo /d02_chassis/vehicle_control_cmd
+```
+
 humanoid 模式额外检查：
 
 ```bash
@@ -624,6 +725,7 @@ ros2 run tf2_ros tf2_echo map odom
 检查原则：
 
 - `/cmd_vel` 输出平滑，底盘能正常订阅。
+- `/socket_can_receiver` 和 `/socket_can_sender` 默认都使用 `can1`。
 - `map -> odom` 只有一个发布源。
 - RViz 中 `/map`、`/scan`、局部/全局 costmap 正常。
 - 如果重定位失败，优先检查 `map_name`、`prior_pcd_file`、外参、初始位姿和 `/registered_scan` 点数。
