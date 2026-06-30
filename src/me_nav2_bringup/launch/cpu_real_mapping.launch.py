@@ -25,6 +25,21 @@ def _launch_setup(context, *args, **kwargs):
     rviz_config_file = LaunchConfiguration("rviz_config_file").perform(context)
     livox_config_file = LaunchConfiguration("livox_config_file").perform(context)
 
+    if livox_config_file and not os.path.exists(livox_config_file):
+        fallback_livox_config_file = os.path.join(
+            get_package_share_directory("livox_ros_driver2"),
+            "config",
+            os.path.basename(livox_config_file),
+        )
+        if os.path.exists(fallback_livox_config_file):
+            print(
+                "[cpu_real_mapping] livox_config_file not found: "
+                f"{livox_config_file}. Falling back to {fallback_livox_config_file}"
+            )
+            livox_config_file = fallback_livox_config_file
+        else:
+            raise RuntimeError(f"livox_config_file does not exist: {livox_config_file}")
+
     vehicle = load_vehicle_config(vehicle_config_file)
     if localization_backend not in ("standard", "humanoid"):
         raise RuntimeError("localization_backend must be 'standard' or 'humanoid'")
@@ -54,6 +69,9 @@ def _launch_setup(context, *args, **kwargs):
             "preprocess.scan_line": int(vehicle["fast_lio"]["scan_line"]),
             "preprocess.blind": float(vehicle["fast_lio"]["blind"]),
             "preprocess.timestamp_unit": int(vehicle["fast_lio"]["timestamp_unit"]),
+            "common.time_sync_en": bool(vehicle["fast_lio"]["time_sync_en"]),
+            "common.time_offset_lidar_to_imu": float(vehicle["fast_lio"]["time_offset_lidar_to_imu"]),
+            "mapping.extrinsic_est_en": bool(vehicle["fast_lio"]["extrinsic_est_en"]),
             "mapping.extrinsic_T": vehicle["fast_lio"]["extrinsic_T"],
             "mapping.extrinsic_R": vehicle["fast_lio"]["extrinsic_R"],
             "pcd_save.pcd_save_en": not use_humanoid_backend,
@@ -109,6 +127,7 @@ def _launch_setup(context, *args, **kwargs):
                 "cloud_sub": "/cloud_registered_1" if use_humanoid_backend else "/cloud_registered",
                 "base_frame": vehicle["base_frame"],
                 "lidar_frame": vehicle["lidar_frame"],
+                "use_wall_time_for_nav": True,
             }
         ],
     )
@@ -124,6 +143,8 @@ def _launch_setup(context, *args, **kwargs):
                 "lidar_frame": vehicle["lidar_frame"],
                 "base_footprint_frame": vehicle["base_frame"],
                 "chassis_frame": vehicle["chassis_frame"],
+                "use_wall_time_for_nav": True,
+                "tf_future_tolerance": 0.5,
             }
         ],
     )
@@ -140,6 +161,8 @@ def _launch_setup(context, *args, **kwargs):
                 "target_frame": vehicle["pointcloud_to_laserscan"]["target_frame"],
                 "min_height": float(vehicle["pointcloud_to_laserscan"]["min_height"]),
                 "max_height": float(vehicle["pointcloud_to_laserscan"]["max_height"]),
+                "transform_tolerance": 0.5,
+                "queue_size": 50,
             },
         ],
         remappings=[("cloud_in", "/registered_scan"), ("scan", "/scan")],

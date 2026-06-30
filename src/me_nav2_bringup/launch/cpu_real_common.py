@@ -16,12 +16,15 @@ def load_vehicle_config(path: str) -> Dict[str, Any]:
         "imu_topic": "/livox/imu",
         "footprint": [[0.21, 0.195], [0.21, -0.195], [-0.21, -0.195], [-0.21, 0.195]],
         "base_to_chassis": {"xyz": [0.0, 0.0, 0.12], "rpy": [0.0, 0.0, 0.0]},
-        "chassis_to_lidar": {"xyz": [0.35, 0.0, 0.18], "rpy": [0.0, 0.0, 0.0]},
+        "chassis_to_lidar": {"xyz": [0.35, 0.0, 0.18], "rpy": [0.022689, 0.383972, 0.0]},
         "fast_lio": {
             "lidar_type": 1,
             "scan_line": 4,
             "blind": 0.5,
             "timestamp_unit": 3,
+            "time_sync_en": False,
+            "time_offset_lidar_to_imu": 0.0,
+            "extrinsic_est_en": False,
             "extrinsic_T": [-0.011, -0.02329, 0.04412],
             "extrinsic_R": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
         },
@@ -52,7 +55,7 @@ def load_vehicle_config(path: str) -> Dict[str, Any]:
             "confidence_loc_th": 0.7,
             "dis_updatemap": 3.5,
         },
-        "pointcloud_to_laserscan": {"target_frame": "livox_frame", "min_height": 0.2, "max_height": 1.0},
+        "pointcloud_to_laserscan": {"target_frame": "base_footprint", "min_height": 0.2, "max_height": 1.0},
         "slam_toolbox": {"min_laser_range": 0.45, "max_laser_range": 40.0},
     }
 

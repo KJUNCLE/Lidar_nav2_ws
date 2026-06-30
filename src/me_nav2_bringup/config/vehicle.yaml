@@ -17,12 +17,15 @@ vehicle:
     rpy: [0.0, 0.0, 0.0]
   chassis_to_lidar:
     xyz: [0.35, 0.0, 0.18]
-    rpy: [0.0, 0.0, 0.0]
+    rpy: [0.022689, 0.383972, 0.0]
   fast_lio:
     lidar_type: 1
     scan_line: 4
     blind: 0.5
     timestamp_unit: 3
+    time_sync_en: false
+    time_offset_lidar_to_imu: 0.0
+    extrinsic_est_en: false
     extrinsic_T: [-0.011, -0.02329, 0.04412]
     extrinsic_R:
       - 1.0
@@ -61,7 +64,7 @@ vehicle:
     confidence_loc_th: 0.7
     dis_updatemap: 3.5
   pointcloud_to_laserscan:
-    target_frame: livox_frame
+    target_frame: base_footprint
     min_height: 0.2
     max_height: 1.0
   slam_toolbox:
